@@ -20,7 +20,7 @@
             <a href="{{ url_for('dashboard') }}" class="{{ 'active' if request.endpoint == 'dashboard' }}"><span>⌂</span> Dashboard</a>
             <a href="{{ url_for('impostazioni') }}" class="{{ 'active' if request.endpoint == 'impostazioni' }}"><span>⌕</span> Ricerca</a>
             <a href="{{ url_for('filtri') }}" class="{{ 'active' if request.endpoint == 'filtri' }}"><span>⚙</span> Filtri avanzati</a>
-            <a href="{{ url_for('profilo') }}" class="{{ 'active' if request.endpoint == 'profilo' }}"><span>👤</span> Profilo</a>
+            <a href="/profilo"><span>👤</span> Profilo</a>
             <a href="#" class="disabled"><span>📊</span> Statistiche <small>presto</small></a>
             <a href="#" class="disabled"><span>🤖</span> Radar AI <small>beta</small></a>
         </nav>

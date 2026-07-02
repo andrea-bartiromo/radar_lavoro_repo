@@ -47,6 +47,7 @@ DEFAULT_EXCLUDE = [
     "agente plurimandatario", "agenti plurimandatari", "key account", "account manager",
     "commerciale", "vendite", "sales", "procacciatore", "rinnovabili", "fotovoltaico",
     "plc", "farmaceutico", "pharma", "bricolage", "ferramenta", "casalinghi",
+    "brevetti", "patent attorney", "mandatario brevetti", "telemarketing", "call center",
 ]
 
 DISTANCE_OPTIONS = {
@@ -72,7 +73,6 @@ SALARY_OPTIONS = {"": "Nessun minimo", "20000": "Almeno 20.000 €", "25000": "A
 PROTECTED_OPTIONS = {"off": "Non filtrare", "only": "Mostra solo offerte L.68/99", "priority": "Dai priorità alle offerte L.68/99"}
 ORGANIZATION_OPTIONS = {"none": "Nessuna preferenza", "large": "Preferisci aziende grandi", "pmi": "Preferisci PMI", "pa": "Preferisci Pubblica Amministrazione"}
 
-# Coordinate approssimative per filtrare meglio gli annunci nell'area dell'Agro Nocerino-Sarnese e dintorni.
 CITY_COORDS = {
     "nocera inferiore": (40.7454, 14.6410),
     "nocera superiore": (40.7421, 14.6746),
@@ -95,6 +95,7 @@ CITY_COORDS = {
     "torre annunziata": (40.7537, 14.4527),
     "ottaviano": (40.8512, 14.4783),
     "napoli": (40.8518, 14.2681),
+    "brescia": (45.5416, 10.2118),
 }
 CITY_PROVINCES = {
     "salerno": "SA", "nocera inferiore": "SA", "nocera superiore": "SA", "pagani": "SA", "angri": "SA",
@@ -102,49 +103,68 @@ CITY_PROVINCES = {
     "pontecagnano faiano": "SA", "castel san giorgio": "SA", "roccapiemonte": "SA",
     "san marzano sul sarno": "SA", "san valentino torio": "SA",
     "pompei": "NA", "castellammare di stabia": "NA", "torre annunziata": "NA", "ottaviano": "NA", "napoli": "NA",
+    "brescia": "BS",
 }
 
 QUERY_PROFILES = {
     "comunicazione digitale": {
         "required_any": ["comunicaz", "digital", "marketing", "content", "social", "media", "grafica", "adv"],
+        "strong_any": ["comunicazione", "digital marketing", "social media", "content", "ufficio stampa", "seo", "copy"],
         "bonus": ["comunicazione", "digital", "marketing", "content", "social", "adv", "campagne", "seo", "copy"],
+        "negative": ["telemarketing", "call center", "outbound", "vendite", "sales", "commerciale"],
     },
     "social media manager": {
         "required_any": ["social", "media", "instagram", "facebook", "tiktok", "community", "content", "creator"],
+        "strong_any": ["social media", "content", "community", "instagram", "facebook", "tiktok", "meta"],
         "bonus": ["social", "media", "content", "community", "meta", "adv", "storytelling"],
-        "negative": ["key account", "account manager", "commerciale", "sales", "vendite", "rappresentante"],
+        "negative": ["key account", "account manager", "commerciale", "sales", "vendite", "rappresentante", "telemarketing"],
     },
     "content creator": {
         "required_any": ["content", "creator", "contenut", "video", "storytelling", "social"],
+        "strong_any": ["content creator", "content", "creator", "contenuti", "storytelling", "social"],
         "bonus": ["content", "creator", "contenuti", "video", "copy", "storytelling"],
+        "negative": ["ragazza", "ragazze immagine", "casting", "fotomodell"],
     },
     "copywriter": {
         "required_any": ["copy", "copywriter", "redatt", "testi", "scrittura", "contenut"],
+        "strong_any": ["copywriter", "copy", "redattore", "redattrice", "testi", "scrittura"],
         "bonus": ["copy", "copywriter", "redazione", "testi", "scrittura", "seo"],
     },
     "giornalista redattore": {
         "required_any": ["giornal", "redatt", "redazione", "editor", "stampa"],
+        "strong_any": ["giornalista", "redattore", "redattrice", "redazione", "editor"],
         "bonus": ["giornal", "redatt", "redazione", "editor", "stampa"],
     },
     "ufficio stampa": {
         "required_any": ["stampa", "press", "comunicaz", "media relation", "pr"],
+        "strong_any": ["ufficio stampa", "press", "media relation", "pr", "comunicazione"],
         "bonus": ["stampa", "press", "comunicazione", "media", "pr"],
     },
     "data analyst junior": {
-        "required_any": ["data", "analyst", "analista", "dati", "analytics", "report", "dashboard", "python", "sql"],
-        "bonus": ["data", "analyst", "analytics", "dati", "python", "sql", "excel", "report"],
-        "negative": ["agente", "plurimandatario", "bricolage", "ferramenta", "casalinghi", "commerciale", "sales"],
+        "required_any": ["data", "analyst", "analista", "dati", "analytics", "report", "dashboard", "python", "sql", "excel"],
+        "strong_any": ["data analyst", "analista dati", "business analyst", "analytics", "python", "sql", "dashboard", "report"],
+        "bonus": ["data", "analyst", "analytics", "dati", "python", "sql", "excel", "report", "dashboard"],
+        "negative": ["agente", "plurimandatario", "bricolage", "ferramenta", "casalinghi", "commerciale", "sales", "brevetti", "patent", "attorney", "mandatario", "meccatronica", "elettronica"],
     },
     "web developer junior": {
-        "required_any": ["developer", "svilupp", "programmat", "web", "python", "javascript", "html", "css", "wordpress", ".net", "java"],
-        "bonus": ["developer", "sviluppatore", "web", "python", "javascript", "html", "css", "wordpress", ".net", "java"],
-        "negative": ["plc", "pharma", "commerciale", "key account", "sales", "agente"],
+        "required_any": ["developer", "svilupp", "programmat", "web", "python", "javascript", "html", "css", "wordpress", ".net", "java", "software"],
+        "strong_any": ["web developer", "software developer", "sviluppatore", "developer", "programmatore", "python", "javascript", ".net", "java", "wordpress"],
+        "bonus": ["developer", "sviluppatore", "web", "python", "javascript", "html", "css", "wordpress", ".net", "java", "software"],
+        "negative": ["plc", "pharma", "commerciale", "key account", "sales", "agente", "brevetti", "patent", "attorney"],
     },
 }
 GLOBAL_NEGATIVE_TERMS = [
     "agente plurimandatario", "agenti plurimandatari", "key account", "commerciale", "sales",
     "procacciatore", "venditore", "vendite", "plc", "bricolage", "ferramenta", "casalinghi",
+    "patent attorney", "mandatario brevetti", "brevetti", "telemarketing", "call center", "operatore outbound",
 ]
+HARD_BLOCK_TERMS = [
+    "patent attorney", "mandatario brevetti", "brevetti", "agente plurimandatario",
+    "ragazze immagine", "fotomodell", "casting", "call center", "telemarketing", "operatore outbound",
+]
+SENIOR_ROLE_TERMS = ["senior", "lead", "responsabile", "head of", "coordinator", "coordinatore", "manager", "team lead"]
+ENTRY_ROLE_TERMS = ["junior", "stage", "tirocinio", "entry level", "neolaureato", "neolaureata", "apprendistato", "prima esperienza"]
+PAROLE_TROPPO_GENERICHE = {"junior", "senior", "manager", "specialist", "responsabile", "lead"}
 CV_TERMS = [
     "comunicazione", "comunicazione digitale", "corporate communication", "social media", "content",
     "copywriting", "copywriter", "giornalismo", "redazione", "ufficio stampa", "digital marketing",
@@ -315,7 +335,7 @@ def contains_any(text: str, terms: list) -> bool:
 def normalizza_testo(value: str) -> str:
     value = (value or "").lower()
     value = re.sub(r"<[^>]+>", " ", value)
-    value = re.sub(r"[^a-z0-9àèéìòù]+", " ", value)
+    value = re.sub(r"[^a-z0-9àèéìòù.+#]+", " ", value)
     return " ".join(value.split())
 
 
@@ -337,8 +357,7 @@ def extract_city(location: str) -> str:
     for city in sorted(CITY_COORDS.keys(), key=len, reverse=True):
         if city in text:
             return city
-    # fallback: elimina eventuali sigle provincia e prende la prima parte significativa
-    text = re.sub(r"\b(sa|na|av|bn|ce)\b", " ", text)
+    text = re.sub(r"\b(sa|na|av|bn|ce|bs)\b", " ", text)
     return " ".join(text.split()[:3])
 
 
@@ -377,22 +396,45 @@ def matches_geo(job: dict, profile: dict) -> bool:
     return distance <= max_distance
 
 
-def relevance_score(job: dict, query: str) -> int:
+def has_hard_block(job: dict, query: str = "") -> bool:
     text = testo_annuncio(job)
     title = normalizza_testo(job.get("title") or "")
+    block_text = f"{title} {normalizza_testo(text)}"
+    if contains_any(block_text, HARD_BLOCK_TERMS):
+        return True
+    if "data analyst" in query.lower() and contains_any(block_text, ["ingegnere", "meccatronica", "elettronica", "brevetti", "patent"]):
+        return True
+    return False
+
+
+def relevance_score(job: dict, query: str) -> int:
+    if has_hard_block(job, query):
+        return 0
+    text = testo_annuncio(job)
+    title = normalizza_testo(job.get("title") or "")
+    normalized_text = normalizza_testo(text)
     query_profile = QUERY_PROFILES.get(query.lower())
     if not query_profile:
         query_terms = [w for w in normalizza_testo(query).split() if len(w) > 3 and w not in PAROLE_TROPPO_GENERICHE]
-        return sum(20 for term in query_terms if term in title or term in text)
-    negative_hits = sum(1 for term in query_profile.get("negative", []) + GLOBAL_NEGATIVE_TERMS if term in text)
+        return sum(20 for term in query_terms if term in title or term in normalized_text)
+
+    negative_hits = sum(1 for term in query_profile.get("negative", []) + GLOBAL_NEGATIVE_TERMS if term in normalized_text)
     if negative_hits:
-        return max(0, 25 - negative_hits * 25)
-    required_hits = sum(1 for term in query_profile["required_any"] if term in text)
-    bonus_hits = sum(1 for term in query_profile.get("bonus", []) if term in text)
+        return 0
+
+    required_hits = sum(1 for term in query_profile["required_any"] if term in normalized_text)
+    strong_hits = sum(1 for term in query_profile.get("strong_any", []) if term in normalized_text)
+    bonus_hits = sum(1 for term in query_profile.get("bonus", []) if term in normalized_text)
     title_hits = sum(1 for term in query_profile["required_any"] if term in title)
+
     if required_hits == 0:
         return 0
-    return min(100, required_hits * 18 + bonus_hits * 6 + title_hits * 12)
+    if query.lower() in {"data analyst junior", "web developer junior"} and strong_hits == 0 and title_hits == 0:
+        return 0
+    if query.lower() in {"comunicazione digitale", "social media manager", "content creator"} and strong_hits == 0 and required_hits < 2:
+        return 0
+
+    return min(100, required_hits * 14 + strong_hits * 18 + bonus_hits * 5 + title_hits * 10)
 
 
 def titolo_e_pertinente(title: str, query: str) -> bool:
@@ -405,7 +447,9 @@ def is_relevant(job: dict, query: str, exclude_keywords: list) -> bool:
     title = (job.get("title") or "").lower()
     if any(bad.lower() in title or bad.lower() in text for bad in exclude_keywords):
         return False
-    return relevance_score(job, query) >= 35
+    if has_hard_block(job, query):
+        return False
+    return relevance_score(job, query) >= 38
 
 
 def is_protected_category(job: dict) -> bool:
@@ -451,9 +495,9 @@ def matches_experience_levels(job: dict, selected_levels: list) -> bool:
     text = testo_annuncio(job)
     level_terms = {
         "internship": ["stage", "tirocinio", "internship", "stagista", "curriculare", "extracurriculare"],
-        "entry": ["junior", "entry level", "neolaureato", "neolaureata", "apprendistato", "prima esperienza"],
+        "entry": ENTRY_ROLE_TERMS,
         "mid": ["middle", "intermedio", "2 anni", "3 anni", "esperienza pregressa", "specialist"],
-        "senior": ["senior", "lead", "responsabile", "coordinator", "coordinatore", "5 anni"],
+        "senior": SENIOR_ROLE_TERMS + ["5 anni"],
     }
     return any(contains_any(text, level_terms.get(level, [])) for level in selected_levels)
 
@@ -512,15 +556,24 @@ def compatibility_score(job: dict, keyword: str, profile: dict) -> tuple[int, li
     text = testo_annuncio(job)
     reasons = []
     relevance = relevance_score(job, keyword)
-    score = min(45, int(relevance * 0.45))
-    if relevance >= 60:
+    score = min(46, int(relevance * 0.46))
+    if relevance >= 70:
         reasons.append("molto pertinente")
-    elif relevance >= 35:
+    elif relevance >= 38:
         reasons.append("pertinente")
+
     matched_terms = [term for term in CV_TERMS if term in text]
-    score += min(25, len(matched_terms) * 4)
+    score += min(24, len(matched_terms) * 4)
     if matched_terms:
         reasons.append("profilo coerente")
+
+    if contains_any(text, ENTRY_ROLE_TERMS):
+        score += 8
+        reasons.append("adatto a profilo junior")
+    if contains_any(text, SENIOR_ROLE_TERMS) and not contains_any(text, ENTRY_ROLE_TERMS):
+        score -= 18
+        reasons.append("ruolo più senior")
+
     if is_protected_category(job):
         score += 15 if profile["priority_protected"] or profile["protected_categories_mode"] == "priority" else 8
         reasons.append("categorie protette")
@@ -530,14 +583,13 @@ def compatibility_score(job: dict, keyword: str, profile: dict) -> tuple[int, li
     if has_salary(job):
         score += 8 if profile["priority_salary"] else 4
         reasons.append("stipendio indicato")
+
     org_pref = profile["organization_preference"]
     org_type = organization_type(job)
     if org_pref != "none" and org_pref == org_type:
         score += 8
         reasons.append(ORGANIZATION_OPTIONS.get(org_pref, "organizzazione preferita").lower())
-    if matches_experience_levels(job, ["internship", "entry"]):
-        score += 5
-        reasons.append("adatto a profilo junior")
+
     return min(100, max(0, score)), reasons[:5]
 
 
@@ -626,7 +678,6 @@ def dashboard():
     filtered_jobs = []
     for row in rows:
         job = row_to_job(row)
-        # Nasconde anche gli annunci vecchi che non rispettano più distanza/rilevanza dopo il cambio filtri.
         if passes_filters(job, profile, job.get("matched_query") or ""):
             filtered_jobs.append(job)
     nuovi = [j for j in filtered_jobs if j["status"] == "nuovo"]

@@ -9,10 +9,13 @@ Avvio: python app.py
 Poi apri http://127.0.0.1:5000
 """
 
+import hashlib
 import json
+import re
 import sqlite3
 from datetime import datetime
 from pathlib import Path
+from urllib.parse import parse_qs, urlparse
 
 import requests
 from flask import Flask, render_template, request, redirect, url_for, flash
@@ -86,6 +89,12 @@ PROTECTED_OPTIONS = {
     "only": "Mostra solo offerte L.68/99",
     "priority": "Dai priorità alle offerte L.68/99",
 }
+ORGANIZATION_OPTIONS = {
+    "none": "Nessuna preferenza",
+    "large": "Preferisci aziende grandi",
+    "pmi": "Preferisci PMI",
+    "pa": "Preferisci Pubblica Amministrazione",
+}
 
 RELEVANCE_TERMS = {
     "comunicazione digitale": ["comunicazion", "digital", "content", "media"],
@@ -98,6 +107,14 @@ RELEVANCE_TERMS = {
     "web developer junior": ["developer", "svilupp", "programmator", "web"],
 }
 PAROLE_TROPPO_GENERICHE = {"junior", "senior", "manager", "specialist", "responsabile"}
+
+CV_TERMS = [
+    "comunicazione", "comunicazione digitale", "corporate communication",
+    "social media", "content", "copywriting", "copywriter", "giornalismo",
+    "redazione", "ufficio stampa", "digital marketing", "web analytics",
+    "seo", "sem", "analytics", "data analyst", "python", "html", "css",
+    "javascript", "wordpress", "figma", "canva", "linkedin", "meta ads",
+]
 
 app = Flask(__name__)
 app.secret_key = "radar-lavoro-uso-personale"
@@ -135,12 +152,19 @@ def init_db():
             contract_types TEXT DEFAULT '[]',
             schedule_types TEXT DEFAULT '[]',
             salary_min TEXT DEFAULT '',
-            protected_categories_mode TEXT DEFAULT 'off'
+            protected_categories_mode TEXT DEFAULT 'off',
+            organization_preference TEXT DEFAULT 'none',
+            priority_salary INTEGER DEFAULT 0,
+            priority_protected INTEGER DEFAULT 0,
+            priority_remote INTEGER DEFAULT 0,
+            deduplicate_cross_sites INTEGER DEFAULT 1,
+            compatibility_enabled INTEGER DEFAULT 1
         );
 
         CREATE TABLE IF NOT EXISTS jobs (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             external_id TEXT UNIQUE,
+            canonical_key TEXT,
             title TEXT,
             company TEXT,
             location TEXT,
@@ -149,27 +173,47 @@ def init_db():
             link TEXT,
             updated TEXT,
             matched_query TEXT,
+            compatibility_score INTEGER DEFAULT 0,
+            priority_reasons TEXT DEFAULT '[]',
             status TEXT DEFAULT 'nuovo',
             first_seen_at TEXT
         );
         """
     )
-    ensure_column(conn, "profile", "distance_km", "TEXT DEFAULT ''")
-    ensure_column(conn, "profile", "work_modes", "TEXT DEFAULT '[]'")
-    ensure_column(conn, "profile", "experience_levels", "TEXT DEFAULT '[]'")
-    ensure_column(conn, "profile", "contract_types", "TEXT DEFAULT '[]'")
-    ensure_column(conn, "profile", "schedule_types", "TEXT DEFAULT '[]'")
-    ensure_column(conn, "profile", "salary_min", "TEXT DEFAULT ''")
-    ensure_column(conn, "profile", "protected_categories_mode", "TEXT DEFAULT 'off'")
-    ensure_column(conn, "jobs", "search_location", "TEXT")
+    for column, definition in [
+        ("distance_km", "TEXT DEFAULT ''"),
+        ("work_modes", "TEXT DEFAULT '[]'"),
+        ("experience_levels", "TEXT DEFAULT '[]'"),
+        ("contract_types", "TEXT DEFAULT '[]'"),
+        ("schedule_types", "TEXT DEFAULT '[]'"),
+        ("salary_min", "TEXT DEFAULT ''"),
+        ("protected_categories_mode", "TEXT DEFAULT 'off'"),
+        ("organization_preference", "TEXT DEFAULT 'none'"),
+        ("priority_salary", "INTEGER DEFAULT 0"),
+        ("priority_protected", "INTEGER DEFAULT 0"),
+        ("priority_remote", "INTEGER DEFAULT 0"),
+        ("deduplicate_cross_sites", "INTEGER DEFAULT 1"),
+        ("compatibility_enabled", "INTEGER DEFAULT 1"),
+    ]:
+        ensure_column(conn, "profile", column, definition)
+
+    for column, definition in [
+        ("search_location", "TEXT"),
+        ("canonical_key", "TEXT"),
+        ("compatibility_score", "INTEGER DEFAULT 0"),
+        ("priority_reasons", "TEXT DEFAULT '[]'"),
+    ]:
+        ensure_column(conn, "jobs", column, definition)
 
     row = conn.execute("SELECT id FROM profile WHERE id = 1").fetchone()
     if row is None:
         conn.execute(
             """INSERT INTO profile
                (id, location, queries, exclude_keywords, distance_km, work_modes,
-                experience_levels, contract_types, schedule_types, salary_min, protected_categories_mode)
-               VALUES (1, ?, ?, ?, '', '[]', '[]', '[]', '[]', '', 'off')""",
+                experience_levels, contract_types, schedule_types, salary_min,
+                protected_categories_mode, organization_preference, priority_salary,
+                priority_protected, priority_remote, deduplicate_cross_sites, compatibility_enabled)
+               VALUES (1, ?, ?, ?, '', '[]', '[]', '[]', '[]', '', 'off', 'none', 0, 1, 1, 1, 1)""",
             ("", json.dumps(DEFAULT_QUERIES), json.dumps(DEFAULT_EXCLUDE)),
         )
     conn.commit()
@@ -201,6 +245,12 @@ def get_profile():
         "schedule_types": load_json_list(row["schedule_types"]),
         "salary_min": row["salary_min"] or "",
         "protected_categories_mode": row["protected_categories_mode"] or "off",
+        "organization_preference": row["organization_preference"] or "none",
+        "priority_salary": bool(row["priority_salary"]),
+        "priority_protected": bool(row["priority_protected"]),
+        "priority_remote": bool(row["priority_remote"]),
+        "deduplicate_cross_sites": bool(row["deduplicate_cross_sites"]),
+        "compatibility_enabled": bool(row["compatibility_enabled"]),
         "distance_options": DISTANCE_OPTIONS,
         "work_mode_options": WORK_MODE_OPTIONS,
         "experience_options": EXPERIENCE_OPTIONS,
@@ -208,6 +258,7 @@ def get_profile():
         "schedule_options": SCHEDULE_OPTIONS,
         "salary_options": SALARY_OPTIONS,
         "protected_options": PROTECTED_OPTIONS,
+        "organization_options": ORGANIZATION_OPTIONS,
     }
 
 
@@ -223,12 +274,17 @@ def save_search_settings(location, queries, exclude_keywords, jooble_api_key, di
     conn.close()
 
 
-def save_advanced_filters(work_modes, experience_levels, contract_types, schedule_types, salary_min, protected_categories_mode):
+def save_advanced_filters(work_modes, experience_levels, contract_types, schedule_types,
+                          salary_min, protected_categories_mode, organization_preference,
+                          priority_salary, priority_protected, priority_remote,
+                          deduplicate_cross_sites, compatibility_enabled):
     conn = get_db()
     conn.execute(
         """UPDATE profile
            SET work_modes=?, experience_levels=?, contract_types=?, schedule_types=?,
-               salary_min=?, protected_categories_mode=?
+               salary_min=?, protected_categories_mode=?, organization_preference=?,
+               priority_salary=?, priority_protected=?, priority_remote=?,
+               deduplicate_cross_sites=?, compatibility_enabled=?
            WHERE id=1""",
         (
             json.dumps(work_modes),
@@ -237,6 +293,12 @@ def save_advanced_filters(work_modes, experience_levels, contract_types, schedul
             json.dumps(schedule_types),
             salary_min,
             protected_categories_mode,
+            organization_preference,
+            int(priority_salary),
+            int(priority_protected),
+            int(priority_remote),
+            int(deduplicate_cross_sites),
+            int(compatibility_enabled),
         ),
     )
     conn.commit()
@@ -254,6 +316,22 @@ def testo_annuncio(job: dict) -> str:
 
 def contains_any(text: str, terms: list) -> bool:
     return any(term in text for term in terms)
+
+
+def normalizza_testo(value: str) -> str:
+    value = (value or "").lower()
+    value = re.sub(r"[^a-z0-9àèéìòù]+", " ", value)
+    return " ".join(value.split())
+
+
+def canonical_job_key(job: dict) -> str:
+    company = normalizza_testo(job.get("company") or "")
+    title = normalizza_testo(job.get("title") or "")
+    location = normalizza_testo(job.get("location") or "")
+    base = f"{company}|{title}|{location}"
+    if not company and not title:
+        base = job.get("link") or ""
+    return hashlib.sha1(base.encode("utf-8")).hexdigest()
 
 
 def is_relevant(title: str, exclude_keywords: list) -> bool:
@@ -283,6 +361,30 @@ def is_protected_category(job: dict) -> bool:
         "disabili", "disabilità", "disabilita", "protected categories", "disability",
     ]
     return contains_any(text, protected_terms)
+
+
+def has_salary(job: dict) -> bool:
+    text = testo_annuncio(job)
+    return any(marker in text for marker in ["€", "eur", "ral", "stipendio", "retribuzione", "salary", "lordi", "netti"])
+
+
+def is_remote(job: dict) -> bool:
+    text = testo_annuncio(job)
+    return contains_any(text, ["remoto", "remote", "smart working", "telelavoro", "home working", "da casa"])
+
+
+def organization_type(job: dict) -> str:
+    text = testo_annuncio(job)
+    pa_terms = ["comune", "ministero", "università", "universita", "asl", "azienda sanitaria", "regione", "provincia", "ente pubblico", "pubblica amministrazione", "pa "]
+    large_terms = ["spa", "s.p.a", "multinazionale", "corporate", "group", "gruppo", "holding", "enterprise", "global", "italiaonline", "accenture", "deloitte", "ey", "kpmg", "pwc", "telecom", "tim", "poste italiane", "intesa", "unicredit"]
+    pmi_terms = ["srl", "s.r.l", "studio", "agenzia", "startup", "start up", "piccola", "media impresa", "pmi"]
+    if contains_any(text, pa_terms):
+        return "pa"
+    if contains_any(text, large_terms):
+        return "large"
+    if contains_any(text, pmi_terms):
+        return "pmi"
+    return "unknown"
 
 
 def matches_work_modes(job: dict, selected_modes: list) -> bool:
@@ -337,13 +439,10 @@ def matches_schedule_types(job: dict, selected_schedules: list) -> bool:
 
 
 def matches_salary(job: dict, salary_min: str) -> bool:
-    # La maggior parte degli annunci Jooble non espone una RAL strutturata.
-    # Per evitare falsi negativi, il filtro stipendio viene applicato solo quando
-    # il testo contiene informazioni economiche riconoscibili.
     if not salary_min:
         return True
     text = testo_annuncio(job)
-    if "€" not in text and "ral" not in text and "stipendio" not in text and "retribuzione" not in text:
+    if not has_salary(job):
         return True
     return salary_min in text or f"{int(salary_min) // 1000}k" in text
 
@@ -360,10 +459,43 @@ def passes_filters(job: dict, profile: dict) -> bool:
     )
 
 
-def sort_jobs_for_priority(jobs: list, profile: dict) -> list:
-    if profile["protected_categories_mode"] != "priority":
-        return jobs
-    return sorted(jobs, key=lambda job: 0 if is_protected_category(job) else 1)
+def compatibility_score(job: dict, keyword: str, profile: dict) -> tuple[int, list]:
+    text = testo_annuncio(job)
+    reasons = []
+    score = 35
+
+    matched_terms = [term for term in CV_TERMS if term in text]
+    score += min(30, len(matched_terms) * 5)
+    if matched_terms:
+        reasons.append("profilo coerente")
+
+    if titolo_e_pertinente(job.get("title") or "", keyword):
+        score += 10
+        reasons.append("titolo pertinente")
+
+    if is_protected_category(job):
+        score += 15 if profile["priority_protected"] or profile["protected_categories_mode"] == "priority" else 8
+        reasons.append("categorie protette")
+
+    if is_remote(job):
+        score += 12 if profile["priority_remote"] else 6
+        reasons.append("remoto")
+
+    if has_salary(job):
+        score += 8 if profile["priority_salary"] else 4
+        reasons.append("stipendio indicato")
+
+    org_pref = profile["organization_preference"]
+    org_type = organization_type(job)
+    if org_pref != "none" and org_pref == org_type:
+        score += 8
+        reasons.append(ORGANIZATION_OPTIONS.get(org_pref, "organizzazione preferita").lower())
+
+    if matches_experience_levels(job, ["internship", "entry"]):
+        score += 5
+        reasons.append("adatto a profilo junior")
+
+    return min(100, max(0, score)), reasons[:5]
 
 
 def search_jooble(keyword: str, profile: dict) -> list:
@@ -391,12 +523,14 @@ def refresh_jobs():
     conn = get_db()
     new_count = 0
     search_location = profile["search_location"]
+    collected_jobs = []
+    seen_canonical_keys = set()
 
     for keyword in profile["queries"]:
-        results = sort_jobs_for_priority(search_jooble(keyword, profile), profile)
-        for job in results:
+        for job in search_jooble(keyword, profile):
             link = job.get("link") or ""
             title = job.get("title") or "Senza titolo"
+            canonical_key = canonical_job_key(job)
             external_id = f"{search_location}|{link}"
 
             if not link or not is_relevant(title, profile["exclude_keywords"]):
@@ -405,47 +539,73 @@ def refresh_jobs():
                 continue
             if not passes_filters(job, profile):
                 continue
+            if profile["deduplicate_cross_sites"] and canonical_key in seen_canonical_keys:
+                continue
+            seen_canonical_keys.add(canonical_key)
 
             exists = conn.execute("SELECT id FROM jobs WHERE external_id = ?", (external_id,)).fetchone()
             if exists:
                 continue
+            if profile["deduplicate_cross_sites"]:
+                duplicate = conn.execute(
+                    "SELECT id FROM jobs WHERE canonical_key = ? AND search_location = ?",
+                    (canonical_key, search_location),
+                ).fetchone()
+                if duplicate:
+                    continue
 
-            conn.execute(
-                """INSERT INTO jobs (external_id, title, company, location, search_location, snippet, link,
-                   updated, matched_query, status, first_seen_at)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'nuovo', ?)""",
-                (
-                    external_id,
-                    title,
-                    job.get("company", "Azienda non specificata"),
-                    job.get("location", ""),
-                    search_location,
-                    (job.get("snippet") or "").replace("&nbsp;", " ").strip(),
-                    link,
-                    job.get("updated", ""),
-                    keyword,
-                    datetime.now().isoformat(timespec="minutes"),
-                ),
-            )
-            new_count += 1
+            score, reasons = compatibility_score(job, keyword, profile) if profile["compatibility_enabled"] else (0, [])
+            collected_jobs.append((score, reasons, keyword, canonical_key, external_id, job))
+
+    collected_jobs.sort(key=lambda item: item[0], reverse=True)
+
+    for score, reasons, keyword, canonical_key, external_id, job in collected_jobs:
+        conn.execute(
+            """INSERT INTO jobs (external_id, canonical_key, title, company, location, search_location,
+               snippet, link, updated, matched_query, compatibility_score, priority_reasons, status, first_seen_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'nuovo', ?)""",
+            (
+                external_id,
+                canonical_key,
+                job.get("title") or "Senza titolo",
+                job.get("company", "Azienda non specificata"),
+                job.get("location", ""),
+                search_location,
+                (job.get("snippet") or "").replace("&nbsp;", " ").strip(),
+                job.get("link") or "",
+                job.get("updated", ""),
+                keyword,
+                score,
+                json.dumps(reasons),
+                datetime.now().isoformat(timespec="minutes"),
+            ),
+        )
+        new_count += 1
 
     conn.commit()
     conn.close()
     return new_count, None
 
 
+def row_to_job(row):
+    job = dict(row)
+    job["priority_reasons"] = load_json_list(job.get("priority_reasons"))
+    return job
+
+
 @app.route("/")
 def dashboard():
     profile = get_profile()
     conn = get_db()
-    jobs = conn.execute(
+    rows = conn.execute(
         """SELECT * FROM jobs
            WHERE search_location = ?
-           ORDER BY first_seen_at DESC
+           ORDER BY compatibility_score DESC, first_seen_at DESC
            LIMIT 150""",
         (profile["search_location"],),
     ).fetchall()
     conn.close()
+    jobs = [row_to_job(row) for row in rows]
     nuovi = [j for j in jobs if j["status"] == "nuovo"]
     visti = [j for j in jobs if j["status"] != "nuovo"]
     return render_template("dashboard.html", nuovi=nuovi, visti=visti, profile=profile)
@@ -457,7 +617,7 @@ def aggiorna():
     if error:
         flash(error, "errore")
     else:
-        flash(f"{count} nuovi annunci trovati per questa area e questi filtri.", "successo")
+        flash(f"{count} nuovi annunci trovati, ordinati per compatibilità.", "successo")
     return redirect(url_for("dashboard"))
 
 
@@ -512,12 +672,28 @@ def filtri():
         schedule_types = [schedule for schedule in request.form.getlist("schedule_types") if schedule in SCHEDULE_OPTIONS]
         salary_min = request.form.get("salary_min", "").strip()
         protected_mode = request.form.get("protected_categories_mode", "off").strip()
+        organization_preference = request.form.get("organization_preference", "none").strip()
         if salary_min not in SALARY_OPTIONS:
             salary_min = ""
         if protected_mode not in PROTECTED_OPTIONS:
             protected_mode = "off"
-        save_advanced_filters(work_modes, experience_levels, contract_types, schedule_types, salary_min, protected_mode)
-        flash("Filtri avanzati salvati. Verranno applicati alla prossima ricerca.", "successo")
+        if organization_preference not in ORGANIZATION_OPTIONS:
+            organization_preference = "none"
+        save_advanced_filters(
+            work_modes,
+            experience_levels,
+            contract_types,
+            schedule_types,
+            salary_min,
+            protected_mode,
+            organization_preference,
+            "priority_salary" in request.form,
+            "priority_protected" in request.form,
+            "priority_remote" in request.form,
+            "deduplicate_cross_sites" in request.form,
+            "compatibility_enabled" in request.form,
+        )
+        flash("Filtri e priorità salvati. Verranno applicati alla prossima ricerca.", "successo")
         return redirect(url_for("filtri"))
     return render_template("filtri.html", profile=get_profile())
 

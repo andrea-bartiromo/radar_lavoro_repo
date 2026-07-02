@@ -1,3 +1,4 @@
 __pycache__/
 *.pyc
 radar_lavoro.db
+radar_lavoro_backup.db

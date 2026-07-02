@@ -68,10 +68,21 @@ app.secret_key = "radar-lavoro-uso-personale"
 # Database — un solo profilo, nessun utente da gestire
 # ----------------------------------------------------------------------
 
+def normalize_location(location: str) -> str:
+    """Rende confrontabili le città salvate, evitando differenze maiuscole/spazi."""
+    return " ".join((location or "").strip().lower().split())
+
+
 def get_db():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
+
+
+def ensure_column(conn, table_name: str, column_name: str, column_definition: str):
+    columns = conn.execute(f"PRAGMA table_info({table_name})").fetchall()
+    if column_name not in [column["name"] for column in columns]:
+        conn.execute(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_definition}")
 
 
 def init_db():
@@ -92,6 +103,7 @@ def init_db():
             title TEXT,
             company TEXT,
             location TEXT,
+            search_location TEXT,
             snippet TEXT,
             link TEXT,
             updated TEXT,
@@ -101,6 +113,7 @@ def init_db():
         );
         """
     )
+    ensure_column(conn, "jobs", "search_location", "TEXT")
     row = conn.execute("SELECT id FROM profile WHERE id = 1").fetchone()
     if row is None:
         conn.execute(
@@ -117,6 +130,7 @@ def get_profile():
     conn.close()
     return {
         "location": row["location"],
+        "search_location": normalize_location(row["location"]),
         "queries": json.loads(row["queries"]),
         "exclude_keywords": json.loads(row["exclude_keywords"]),
         "jooble_api_key": row["jooble_api_key"],
@@ -179,6 +193,7 @@ def refresh_jobs():
 
     conn = get_db()
     new_count = 0
+    search_location = profile["search_location"]
 
     for keyword in profile["queries"]:
         results = search_jooble(keyword, profile["location"], profile["jooble_api_key"])
@@ -189,17 +204,21 @@ def refresh_jobs():
                 continue
             if not titolo_e_pertinente(title, keyword):
                 continue
-            exists = conn.execute("SELECT id FROM jobs WHERE external_id = ?", (link,)).fetchone()
+            exists = conn.execute(
+                "SELECT id FROM jobs WHERE external_id = ? AND search_location = ?",
+                (link, search_location),
+            ).fetchone()
             if exists:
                 continue
             conn.execute(
-                """INSERT INTO jobs (external_id, title, company, location, snippet, link,
+                """INSERT INTO jobs (external_id, title, company, location, search_location, snippet, link,
                    updated, matched_query, status, first_seen_at)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'nuovo', ?)""",
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'nuovo', ?)""",
                 (
                     link, title,
                     job.get("company", "Azienda non specificata"),
                     job.get("location", ""),
+                    search_location,
                     (job.get("snippet") or "").replace("&nbsp;", " ").strip(),
                     link,
                     job.get("updated", ""),
@@ -220,12 +239,19 @@ def refresh_jobs():
 
 @app.route("/")
 def dashboard():
+    profile = get_profile()
     conn = get_db()
-    jobs = conn.execute("SELECT * FROM jobs ORDER BY first_seen_at DESC LIMIT 150").fetchall()
+    jobs = conn.execute(
+        """SELECT * FROM jobs
+           WHERE search_location = ?
+           ORDER BY first_seen_at DESC
+           LIMIT 150""",
+        (profile["search_location"],),
+    ).fetchall()
     conn.close()
     nuovi = [j for j in jobs if j["status"] == "nuovo"]
     visti = [j for j in jobs if j["status"] != "nuovo"]
-    return render_template("dashboard.html", nuovi=nuovi, visti=visti, profile=get_profile())
+    return render_template("dashboard.html", nuovi=nuovi, visti=visti, profile=profile)
 
 
 @app.route("/aggiorna", methods=["POST"])
@@ -234,14 +260,18 @@ def aggiorna():
     if error:
         flash(error, "errore")
     else:
-        flash(f"{count} nuovi annunci trovati.", "successo")
+        flash(f"{count} nuovi annunci trovati per questa area.", "successo")
     return redirect(url_for("dashboard"))
 
 
 @app.route("/segna-visto/<int:job_id>", methods=["POST"])
 def segna_visto(job_id):
+    profile = get_profile()
     conn = get_db()
-    conn.execute("UPDATE jobs SET status = 'visto' WHERE id = ?", (job_id,))
+    conn.execute(
+        "UPDATE jobs SET status = 'visto' WHERE id = ? AND search_location = ?",
+        (job_id, profile["search_location"]),
+    )
     conn.commit()
     conn.close()
     return redirect(url_for("dashboard"))
@@ -249,8 +279,12 @@ def segna_visto(job_id):
 
 @app.route("/segna-tutti-visti", methods=["POST"])
 def segna_tutti_visti():
+    profile = get_profile()
     conn = get_db()
-    conn.execute("UPDATE jobs SET status = 'visto' WHERE status = 'nuovo'")
+    conn.execute(
+        "UPDATE jobs SET status = 'visto' WHERE status = 'nuovo' AND search_location = ?",
+        (profile["search_location"],),
+    )
     conn.commit()
     conn.close()
     return redirect(url_for("dashboard"))
@@ -265,7 +299,7 @@ def impostazioni():
         jooble_api_key = request.form.get("jooble_api_key", "").strip()
 
         save_profile(location, queries, exclude, jooble_api_key)
-        flash("Impostazioni salvate.", "successo")
+        flash("Impostazioni salvate. La dashboard mostrerà solo gli annunci della città impostata.", "successo")
         return redirect(url_for("impostazioni"))
 
     return render_template("impostazioni.html", profile=get_profile())

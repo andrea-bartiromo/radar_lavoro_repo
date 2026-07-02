@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% block title %}Filtri avanzati — Radar Lavoro{% endblock %}
+
+{% block content %}
+<section class="hero hero-compact">
+    <div class="hero-text">
+        <span class="eyebrow">Filtri avanzati</span>
+        <h1>Dai priorità agli annunci più adatti a te.</h1>
+        <p class="hero-sub">Scegli cosa deve contare di più quando Radar Lavoro ordina le offerte.</p>
+    </div>
+</section>
+
+<form method="post" class="form-card form-card-wide">
+    <section class="filter-section">
+        <h2>Modalità di lavoro</h2>
+        <div class="choice-grid">
+            {% for value, label in profile.work_mode_options.items() %}
+            <label class="choice-card">
+                <input type="checkbox" name="work_modes" value="{{ value }}" {% if value in profile.work_modes %}checked{% endif %}>
+                <span>{{ label }}</span>
+            </label>
+            {% endfor %}
+        </div>
+        <p class="hint">Se non selezioni nulla, Radar non filtra per modalità di lavoro.</p>
+    </section>
+
+    <section class="filter-section">
+        <h2>Livello di esperienza</h2>
+        <div class="choice-grid">
+            {% for value, label in profile.experience_options.items() %}
+            <label class="choice-card">
+                <input type="checkbox" name="experience_levels" value="{{ value }}" {% if value in profile.experience_levels %}checked{% endif %}>
+                <span>{{ label }}</span>
+            </label>
+            {% endfor %}
+        </div>
+    </section>
+
+    <section class="filter-section">
+        <h2>Tipo di contratto</h2>
+        <div class="choice-grid">
+            {% for value, label in profile.contract_options.items() %}
+            <label class="choice-card">
+                <input type="checkbox" name="contract_types" value="{{ value }}" {% if value in profile.contract_types %}checked{% endif %}>
+                <span>{{ label }}</span>
+            </label>
+            {% endfor %}
+        </div>
+    </section>
+
+    <section class="filter-section">
+        <h2>Orario</h2>
+        <div class="choice-grid">
+            {% for value, label in profile.schedule_options.items() %}
+            <label class="choice-card">
+                <input type="checkbox" name="schedule_types" value="{{ value }}" {% if value in profile.schedule_types %}checked{% endif %}>
+                <span>{{ label }}</span>
+            </label>
+            {% endfor %}
+        </div>
+    </section>
+
+    <section class="filter-section filter-two-cols">
+        <div class="field">
+            <label for="salary_min">Stipendio minimo</label>
+            <select id="salary_min" name="salary_min">
+                {% for value, label in profile.salary_options.items() %}
+                <option value="{{ value }}" {% if value == profile.salary_min %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+            <p class="hint">Il filtro è prudente: se un annuncio non indica stipendio, non viene escluso automaticamente.</p>
+        </div>
+
+        <div class="field">
+            <label for="protected_categories_mode">Categorie protette L.68/99</label>
+            <select id="protected_categories_mode" name="protected_categories_mode">
+                {% for value, label in profile.protected_options.items() %}
+                <option value="{{ value }}" {% if value == profile.protected_categories_mode %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </section>
+
+    <section class="filter-section">
+        <h2>Tipo di organizzazione preferita</h2>
+        <div class="choice-grid">
+            {% for value, label in profile.organization_options.items() %}
+            <label class="choice-card">
+                <input type="radio" name="organization_preference" value="{{ value }}" {% if value == profile.organization_preference %}checked{% endif %}>
+                <span>{{ label }}</span>
+            </label>
+            {% endfor %}
+        </div>
+    </section>
+
+    <section class="filter-section">
+        <h2>Priorità del ranking</h2>
+        <div class="choice-grid">
+            <label class="choice-card">
+                <input type="checkbox" name="priority_salary" {% if profile.priority_salary %}checked{% endif %}>
+                <span>Dai priorità agli annunci con stipendio indicato</span>
+            </label>
+            <label class="choice-card">
+                <input type="checkbox" name="priority_protected" {% if profile.priority_protected %}checked{% endif %}>
+                <span>Dai priorità alle offerte per categorie protette</span>
+            </label>
+            <label class="choice-card">
+                <input type="checkbox" name="priority_remote" {% if profile.priority_remote %}checked{% endif %}>
+                <span>Dai priorità al lavoro remoto</span>
+            </label>
+            <label class="choice-card">
+                <input type="checkbox" name="deduplicate_cross_sites" {% if profile.deduplicate_cross_sites %}checked{% endif %}>
+                <span>Escludi annunci duplicati tra siti diversi</span>
+            </label>
+            <label class="choice-card">
+                <input type="checkbox" name="compatibility_enabled" {% if profile.compatibility_enabled %}checked{% endif %}>
+                <span>Ordina con punteggio di compatibilità 0–100</span>
+            </label>
+        </div>
+    </section>
+
+    <div class="form-actions">
+        <button type="submit" class="btn-primary">Salva filtri avanzati</button>
+        <a href="{{ url_for('dashboard') }}" class="btn-secondary">Torna alla Dashboard</a>
+    </div>
+</form>
+{% endblock %}

@@ -22,9 +22,6 @@ DB_PATH = BASE_DIR / "radar_lavoro.db"
 
 JOOBLE_URL = "https://it.jooble.org/api/{key}"
 
-# Parole chiave di partenza, ricavate dal profilo di Andrea (comunicazione,
-# giornalismo, social media, più le competenze digitali/tecniche da CV).
-# Si modificano liberamente dalla pagina Impostazioni.
 DEFAULT_QUERIES = [
     "comunicazione digitale",
     "social media manager",
@@ -47,17 +44,47 @@ DEFAULT_EXCLUDE = [
     "modell", "district manager", "area manager contratti", "beauty",
 ]
 
+DISTANCE_OPTIONS = {
+    "": "Solo città / area indicata",
+    "10": "Entro 10 km",
+    "25": "Entro 25 km",
+    "50": "Entro 50 km",
+    "100": "Entro 100 km",
+}
 WORK_MODE_OPTIONS = {
     "remote": "Da remoto",
     "hybrid": "Ibrido / misto",
     "onsite": "In presenza",
 }
-
 EXPERIENCE_OPTIONS = {
     "internship": "Stage / tirocinio",
     "entry": "Junior / entry level",
     "mid": "Intermedio",
     "senior": "Senior",
+}
+CONTRACT_OPTIONS = {
+    "permanent": "Tempo indeterminato",
+    "fixed_term": "Tempo determinato",
+    "apprenticeship": "Apprendistato",
+    "internship": "Stage / tirocinio",
+    "freelance": "Freelance / collaborazione / P. IVA",
+}
+SCHEDULE_OPTIONS = {
+    "full_time": "Full time",
+    "part_time": "Part time",
+    "flexible": "Flessibile",
+}
+SALARY_OPTIONS = {
+    "": "Nessun minimo",
+    "20000": "Almeno 20.000 €",
+    "25000": "Almeno 25.000 €",
+    "30000": "Almeno 30.000 €",
+    "35000": "Almeno 35.000 €",
+}
+PROTECTED_OPTIONS = {
+    "off": "Non filtrare",
+    "only": "Mostra solo offerte L.68/99",
+    "priority": "Dai priorità alle offerte L.68/99",
 }
 
 RELEVANCE_TERMS = {
@@ -76,12 +103,7 @@ app = Flask(__name__)
 app.secret_key = "radar-lavoro-uso-personale"
 
 
-# ----------------------------------------------------------------------
-# Database — un solo profilo, nessun utente da gestire
-# ----------------------------------------------------------------------
-
 def normalize_location(location: str) -> str:
-    """Rende confrontabili le città salvate, evitando differenze maiuscole/spazi."""
     return " ".join((location or "").strip().lower().split())
 
 
@@ -109,7 +131,11 @@ def init_db():
             jooble_api_key TEXT DEFAULT '',
             distance_km TEXT DEFAULT '',
             work_modes TEXT DEFAULT '[]',
-            experience_levels TEXT DEFAULT '[]'
+            experience_levels TEXT DEFAULT '[]',
+            contract_types TEXT DEFAULT '[]',
+            schedule_types TEXT DEFAULT '[]',
+            salary_min TEXT DEFAULT '',
+            protected_categories_mode TEXT DEFAULT 'off'
         );
 
         CREATE TABLE IF NOT EXISTS jobs (
@@ -131,13 +157,19 @@ def init_db():
     ensure_column(conn, "profile", "distance_km", "TEXT DEFAULT ''")
     ensure_column(conn, "profile", "work_modes", "TEXT DEFAULT '[]'")
     ensure_column(conn, "profile", "experience_levels", "TEXT DEFAULT '[]'")
+    ensure_column(conn, "profile", "contract_types", "TEXT DEFAULT '[]'")
+    ensure_column(conn, "profile", "schedule_types", "TEXT DEFAULT '[]'")
+    ensure_column(conn, "profile", "salary_min", "TEXT DEFAULT ''")
+    ensure_column(conn, "profile", "protected_categories_mode", "TEXT DEFAULT 'off'")
     ensure_column(conn, "jobs", "search_location", "TEXT")
+
     row = conn.execute("SELECT id FROM profile WHERE id = 1").fetchone()
     if row is None:
         conn.execute(
             """INSERT INTO profile
-               (id, location, queries, exclude_keywords, distance_km, work_modes, experience_levels)
-               VALUES (1, ?, ?, ?, '', '[]', '[]')""",
+               (id, location, queries, exclude_keywords, distance_km, work_modes,
+                experience_levels, contract_types, schedule_types, salary_min, protected_categories_mode)
+               VALUES (1, ?, ?, ?, '', '[]', '[]', '[]', '[]', '', 'off')""",
             ("", json.dumps(DEFAULT_QUERIES), json.dumps(DEFAULT_EXCLUDE)),
         )
     conn.commit()
@@ -156,8 +188,6 @@ def get_profile():
     conn = get_db()
     row = conn.execute("SELECT * FROM profile WHERE id = 1").fetchone()
     conn.close()
-    work_modes = load_json_list(row["work_modes"])
-    experience_levels = load_json_list(row["experience_levels"])
     return {
         "location": row["location"],
         "search_location": normalize_location(row["location"]),
@@ -165,37 +195,53 @@ def get_profile():
         "exclude_keywords": load_json_list(row["exclude_keywords"]),
         "jooble_api_key": row["jooble_api_key"],
         "distance_km": row["distance_km"] or "",
-        "work_modes": work_modes,
-        "experience_levels": experience_levels,
+        "work_modes": load_json_list(row["work_modes"]),
+        "experience_levels": load_json_list(row["experience_levels"]),
+        "contract_types": load_json_list(row["contract_types"]),
+        "schedule_types": load_json_list(row["schedule_types"]),
+        "salary_min": row["salary_min"] or "",
+        "protected_categories_mode": row["protected_categories_mode"] or "off",
+        "distance_options": DISTANCE_OPTIONS,
         "work_mode_options": WORK_MODE_OPTIONS,
         "experience_options": EXPERIENCE_OPTIONS,
+        "contract_options": CONTRACT_OPTIONS,
+        "schedule_options": SCHEDULE_OPTIONS,
+        "salary_options": SALARY_OPTIONS,
+        "protected_options": PROTECTED_OPTIONS,
     }
 
 
-def save_profile(location, queries, exclude_keywords, jooble_api_key, distance_km, work_modes, experience_levels):
+def save_search_settings(location, queries, exclude_keywords, jooble_api_key, distance_km):
     conn = get_db()
     conn.execute(
         """UPDATE profile
-           SET location=?, queries=?, exclude_keywords=?, jooble_api_key=?,
-               distance_km=?, work_modes=?, experience_levels=?
+           SET location=?, queries=?, exclude_keywords=?, jooble_api_key=?, distance_km=?
            WHERE id=1""",
-        (
-            location,
-            json.dumps(queries),
-            json.dumps(exclude_keywords),
-            jooble_api_key,
-            distance_km,
-            json.dumps(work_modes),
-            json.dumps(experience_levels),
-        ),
+        (location, json.dumps(queries), json.dumps(exclude_keywords), jooble_api_key, distance_km),
     )
     conn.commit()
     conn.close()
 
 
-# ----------------------------------------------------------------------
-# Ricerca annunci
-# ----------------------------------------------------------------------
+def save_advanced_filters(work_modes, experience_levels, contract_types, schedule_types, salary_min, protected_categories_mode):
+    conn = get_db()
+    conn.execute(
+        """UPDATE profile
+           SET work_modes=?, experience_levels=?, contract_types=?, schedule_types=?,
+               salary_min=?, protected_categories_mode=?
+           WHERE id=1""",
+        (
+            json.dumps(work_modes),
+            json.dumps(experience_levels),
+            json.dumps(contract_types),
+            json.dumps(schedule_types),
+            salary_min,
+            protected_categories_mode,
+        ),
+    )
+    conn.commit()
+    conn.close()
+
 
 def testo_annuncio(job: dict) -> str:
     return " ".join([
@@ -218,7 +264,6 @@ def is_relevant(title: str, exclude_keywords: list) -> bool:
 def titolo_e_pertinente(title: str, query: str) -> bool:
     title_lower = (title or "").lower()
     query_lower = query.lower()
-
     termini = RELEVANCE_TERMS.get(query_lower)
     if termini is None:
         termini = [
@@ -227,14 +272,22 @@ def titolo_e_pertinente(title: str, query: str) -> bool:
         ]
         if not termini:
             return True
-
     return any(t in title_lower for t in termini)
+
+
+def is_protected_category(job: dict) -> bool:
+    text = testo_annuncio(job)
+    protected_terms = [
+        "legge 68/99", "l.68/99", "l 68/99", "68/99", "categorie protette",
+        "categoria protetta", "art. 1", "art 1", "invalidità civile", "invalidita civile",
+        "disabili", "disabilità", "disabilita", "protected categories", "disability",
+    ]
+    return contains_any(text, protected_terms)
 
 
 def matches_work_modes(job: dict, selected_modes: list) -> bool:
     if not selected_modes:
         return True
-
     text = testo_annuncio(job)
     mode_terms = {
         "remote": ["remoto", "remote", "smart working", "telelavoro", "home working", "da casa"],
@@ -247,7 +300,6 @@ def matches_work_modes(job: dict, selected_modes: list) -> bool:
 def matches_experience_levels(job: dict, selected_levels: list) -> bool:
     if not selected_levels:
         return True
-
     text = testo_annuncio(job)
     level_terms = {
         "internship": ["stage", "tirocinio", "internship", "stagista", "curriculare", "extracurriculare"],
@@ -258,22 +310,67 @@ def matches_experience_levels(job: dict, selected_levels: list) -> bool:
     return any(contains_any(text, level_terms.get(level, [])) for level in selected_levels)
 
 
+def matches_contract_types(job: dict, selected_contracts: list) -> bool:
+    if not selected_contracts:
+        return True
+    text = testo_annuncio(job)
+    contract_terms = {
+        "permanent": ["tempo indeterminato", "indeterminato", "permanent"],
+        "fixed_term": ["tempo determinato", "determinato", "fixed term"],
+        "apprenticeship": ["apprendistato", "apprenticeship"],
+        "internship": ["stage", "tirocinio", "internship"],
+        "freelance": ["freelance", "collaborazione", "partita iva", "p. iva", "p iva", "consulenza"],
+    }
+    return any(contains_any(text, contract_terms.get(contract, [])) for contract in selected_contracts)
+
+
+def matches_schedule_types(job: dict, selected_schedules: list) -> bool:
+    if not selected_schedules:
+        return True
+    text = testo_annuncio(job)
+    schedule_terms = {
+        "full_time": ["full time", "full-time", "tempo pieno"],
+        "part_time": ["part time", "part-time", "tempo parziale"],
+        "flexible": ["flessibile", "orario flessibile", "smart working", "da remoto"],
+    }
+    return any(contains_any(text, schedule_terms.get(schedule, [])) for schedule in selected_schedules)
+
+
+def matches_salary(job: dict, salary_min: str) -> bool:
+    # La maggior parte degli annunci Jooble non espone una RAL strutturata.
+    # Per evitare falsi negativi, il filtro stipendio viene applicato solo quando
+    # il testo contiene informazioni economiche riconoscibili.
+    if not salary_min:
+        return True
+    text = testo_annuncio(job)
+    if "€" not in text and "ral" not in text and "stipendio" not in text and "retribuzione" not in text:
+        return True
+    return salary_min in text or f"{int(salary_min) // 1000}k" in text
+
+
 def passes_filters(job: dict, profile: dict) -> bool:
+    if profile["protected_categories_mode"] == "only" and not is_protected_category(job):
+        return False
     return (
         matches_work_modes(job, profile["work_modes"])
         and matches_experience_levels(job, profile["experience_levels"])
+        and matches_contract_types(job, profile["contract_types"])
+        and matches_schedule_types(job, profile["schedule_types"])
+        and matches_salary(job, profile["salary_min"])
     )
+
+
+def sort_jobs_for_priority(jobs: list, profile: dict) -> list:
+    if profile["protected_categories_mode"] != "priority":
+        return jobs
+    return sorted(jobs, key=lambda job: 0 if is_protected_category(job) else 1)
 
 
 def search_jooble(keyword: str, profile: dict) -> list:
     url = JOOBLE_URL.format(key=profile["jooble_api_key"])
     payload = {"keywords": keyword, "location": profile["location"]}
-
-    # Jooble può usare il raggio se supportato dalla chiave/API; in caso contrario
-    # la richiesta continua comunque a funzionare con città e parole chiave.
     if profile["distance_km"]:
         payload["radius"] = profile["distance_km"]
-
     try:
         resp = requests.post(url, json=payload, timeout=20)
         resp.raise_for_status()
@@ -285,18 +382,18 @@ def search_jooble(keyword: str, profile: dict) -> list:
 def refresh_jobs():
     profile = get_profile()
     if not profile["location"]:
-        return 0, "Imposta prima la tua città in Impostazioni."
+        return 0, "Imposta prima la tua città in Ricerca."
     if not profile["jooble_api_key"]:
-        return 0, "Imposta prima la tua API key Jooble in Impostazioni."
+        return 0, "Imposta prima la tua API key Jooble in Ricerca."
     if not profile["queries"]:
-        return 0, "Aggiungi almeno una parola chiave di ricerca in Impostazioni."
+        return 0, "Aggiungi almeno una parola chiave di ricerca."
 
     conn = get_db()
     new_count = 0
     search_location = profile["search_location"]
 
     for keyword in profile["queries"]:
-        results = search_jooble(keyword, profile)
+        results = sort_jobs_for_priority(search_jooble(keyword, profile), profile)
         for job in results:
             link = job.get("link") or ""
             title = job.get("title") or "Senza titolo"
@@ -336,10 +433,6 @@ def refresh_jobs():
     conn.close()
     return new_count, None
 
-
-# ----------------------------------------------------------------------
-# Routes
-# ----------------------------------------------------------------------
 
 @app.route("/")
 def dashboard():
@@ -402,14 +495,31 @@ def impostazioni():
         exclude = [q.strip() for q in request.form.get("exclude_keywords", "").split(",") if q.strip()]
         jooble_api_key = request.form.get("jooble_api_key", "").strip()
         distance_km = request.form.get("distance_km", "").strip()
+        if distance_km not in DISTANCE_OPTIONS:
+            distance_km = ""
+        save_search_settings(location, queries, exclude, jooble_api_key, distance_km)
+        flash("Ricerca salvata. Ora puoi premere Cerca ora dalla Dashboard.", "successo")
+        return redirect(url_for("impostazioni"))
+    return render_template("impostazioni.html", profile=get_profile())
+
+
+@app.route("/filtri", methods=["GET", "POST"])
+def filtri():
+    if request.method == "POST":
         work_modes = [mode for mode in request.form.getlist("work_modes") if mode in WORK_MODE_OPTIONS]
         experience_levels = [level for level in request.form.getlist("experience_levels") if level in EXPERIENCE_OPTIONS]
-
-        save_profile(location, queries, exclude, jooble_api_key, distance_km, work_modes, experience_levels)
-        flash("Impostazioni salvate. La dashboard mostrerà solo gli annunci compatibili con area e filtri.", "successo")
-        return redirect(url_for("impostazioni"))
-
-    return render_template("impostazioni.html", profile=get_profile())
+        contract_types = [contract for contract in request.form.getlist("contract_types") if contract in CONTRACT_OPTIONS]
+        schedule_types = [schedule for schedule in request.form.getlist("schedule_types") if schedule in SCHEDULE_OPTIONS]
+        salary_min = request.form.get("salary_min", "").strip()
+        protected_mode = request.form.get("protected_categories_mode", "off").strip()
+        if salary_min not in SALARY_OPTIONS:
+            salary_min = ""
+        if protected_mode not in PROTECTED_OPTIONS:
+            protected_mode = "off"
+        save_advanced_filters(work_modes, experience_levels, contract_types, schedule_types, salary_min, protected_mode)
+        flash("Filtri avanzati salvati. Verranno applicati alla prossima ricerca.", "successo")
+        return redirect(url_for("filtri"))
+    return render_template("filtri.html", profile=get_profile())
 
 
 if __name__ == "__main__":

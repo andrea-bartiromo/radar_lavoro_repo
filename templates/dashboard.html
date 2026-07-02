@@ -15,7 +15,11 @@
     <div class="job-main">
         <div class="job-topline">
             <span class="job-id">N. {{ '%04d'|format(job.id) }}</span>
-            {% if is_new %}<span class="pill success">Nuovo</span>{% endif %}
+            {% if is_new %}
+                <span class="pill success">Nuovo</span>
+            {% else %}
+                <span class="pill muted">Già visto</span>
+            {% endif %}
             <span class="job-date">{{ job.first_seen_at }}</span>
         </div>
 
@@ -73,10 +77,26 @@
         {% endif %}
 
         <section class="stats-row stats-row-four">
-            <div class="stat-card violet"><span class="stat-icon">✦</span><span class="stat-number">{{ nuovi|length }}</span><span class="stat-label">Nuovi annunci</span></div>
-            <div class="stat-card green"><span class="stat-icon">✓</span><span class="stat-number">{{ visti|length }}</span><span class="stat-label">Già visti</span></div>
-            <div class="stat-card blue"><span class="stat-icon">#</span><span class="stat-number">{{ profile.queries|length }}</span><span class="stat-label">Parole chiave</span></div>
-            <div class="stat-card orange"><span class="stat-icon">☆</span><span class="stat-number">{{ 'ON' if profile.compatibility_enabled else 'OFF' }}</span><span class="stat-label">Ranking</span></div>
+            <div class="stat-card violet">
+                <span class="stat-icon">✦</span>
+                <span class="stat-number">{{ nuovi|length }}</span>
+                <span class="stat-label">Nuovi annunci</span>
+            </div>
+            <a class="stat-card green stat-card-link" href="#gia-visti">
+                <span class="stat-icon">✓</span>
+                <span class="stat-number">{{ visti|length }}</span>
+                <span class="stat-label">Già visti</span>
+            </a>
+            <div class="stat-card blue">
+                <span class="stat-icon">#</span>
+                <span class="stat-number">{{ profile.queries|length }}</span>
+                <span class="stat-label">Parole chiave</span>
+            </div>
+            <div class="stat-card orange">
+                <span class="stat-icon">☆</span>
+                <span class="stat-number">{{ 'ON' if profile.compatibility_enabled else 'OFF' }}</span>
+                <span class="stat-label">Ranking</span>
+            </div>
         </section>
 
         <section class="register">
@@ -100,6 +120,27 @@
                 <div class="empty-state">
                     <strong>Nessuna novità al momento.</strong>
                     <p>Premi "Cerca ora" oppure allarga leggermente l'area di ricerca.</p>
+                </div>
+            {% endif %}
+        </section>
+
+        <section id="gia-visti" class="register register-muted seen-section">
+            <div class="register-header">
+                <div>
+                    <span class="section-kicker">Già visti</span>
+                    <h2>{{ visti|length }} annunci già consultati</h2>
+                </div>
+                <a href="#top" class="btn-ghost small">Torna su</a>
+            </div>
+
+            {% if visti %}
+                {% for job in visti %}
+                    {{ job_card(job, False) }}
+                {% endfor %}
+            {% else %}
+                <div class="empty-state">
+                    <strong>Nessun annuncio già visto.</strong>
+                    <p>Quando userai “Segna come visto”, gli annunci finiranno qui invece di sparire.</p>
                 </div>
             {% endif %}
         </section>
@@ -141,15 +182,4 @@
         </div>
     </aside>
 </section>
-
-{% if visti %}
-<section class="register register-muted seen-section">
-    <div class="register-header">
-        <div><span class="section-kicker">Già visti</span><h2>Ultimi annunci archiviati</h2></div>
-    </div>
-    {% for job in visti[:10] %}
-        {{ job_card(job, False) }}
-    {% endfor %}
-</section>
-{% endif %}
 {% endblock %}

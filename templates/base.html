@@ -5,40 +5,50 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>{% block title %}Radar Lavoro{% endblock %}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,500;8..60,600;8..60,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-<div class="page">
-    <header class="topbar">
+<div class="app-shell">
+    <aside class="sidebar">
         <a class="brand" href="{{ url_for('dashboard') }}">
-            <span class="brand-mark">RL</span>
-            <span class="brand-name">Radar <em>Lavoro</em></span>
+            <span class="brand-mark">◎</span>
+            <span class="brand-name">Radar<br><strong>Lavoro</strong></span>
         </a>
+
         <nav class="nav">
-            <a href="{{ url_for('dashboard') }}" class="{{ 'active' if request.endpoint == 'dashboard' }}">Dashboard</a>
-            <a href="{{ url_for('impostazioni') }}" class="{{ 'active' if request.endpoint == 'impostazioni' }}">Ricerca</a>
-            <a href="{{ url_for('filtri') }}" class="{{ 'active' if request.endpoint == 'filtri' }}">Filtri avanzati</a>
+            <a href="{{ url_for('dashboard') }}" class="{{ 'active' if request.endpoint == 'dashboard' }}"><span>⌂</span> Dashboard</a>
+            <a href="{{ url_for('impostazioni') }}" class="{{ 'active' if request.endpoint == 'impostazioni' }}"><span>⌕</span> Ricerca</a>
+            <a href="{{ url_for('filtri') }}" class="{{ 'active' if request.endpoint == 'filtri' }}"><span>⚙</span> Filtri avanzati</a>
+            <a href="#" class="disabled"><span>👤</span> Profilo <small>presto</small></a>
+            <a href="#" class="disabled"><span>📊</span> Statistiche <small>presto</small></a>
+            <a href="#" class="disabled"><span>🤖</span> Radar AI <small>beta</small></a>
         </nav>
-    </header>
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            <div class="flash-stack">
-            {% for category, message in messages %}
-                <div class="flash flash-{{ category }}">{{ message }}</div>
-            {% endfor %}
+        <div class="profile-card">
+            <div class="avatar">AB</div>
+            <div>
+                <strong>Andrea Bartiromo</strong>
+                <span>Categorie protette L.68/99</span>
             </div>
-        {% endif %}
-    {% endwith %}
+        </div>
+    </aside>
 
-    <main class="content">
-        {% block content %}{% endblock %}
-    </main>
+    <div class="main-area">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-stack">
+                {% for category, message in messages %}
+                    <div class="flash flash-{{ category }}">{{ message }}</div>
+                {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
 
-    <footer class="footer">
-        <span>Radar Lavoro &middot; strumento personale &middot; dati da Jooble</span>
-    </footer>
+        <main class="content">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
 </div>
 </body>
 </html>

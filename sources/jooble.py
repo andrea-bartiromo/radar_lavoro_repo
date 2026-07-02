@@ -10,6 +10,30 @@ from typing import Any
 
 import requests
 
+from services.text_service import normalize_text
+
+
+REGION_QUERY_BY_CITY = {
+    "angri": "Campania",
+    "castel san giorgio": "Campania",
+    "castellammare di stabia": "Campania",
+    "cava de tirreni": "Campania",
+    "cava de' tirreni": "Campania",
+    "napoli": "Campania",
+    "nocera inferiore": "Campania",
+    "nocera superiore": "Campania",
+    "pagani": "Campania",
+    "pompei": "Campania",
+    "pontecagnano faiano": "Campania",
+    "roccapiemonte": "Campania",
+    "salerno": "Campania",
+    "san marzano sul sarno": "Campania",
+    "san valentino torio": "Campania",
+    "sarno": "Campania",
+    "scafati": "Campania",
+    "torre annunziata": "Campania",
+}
+
 
 class JoobleSource:
     """Fonte annunci Jooble."""
@@ -24,7 +48,7 @@ class JoobleSource:
 
         payload: dict[str, Any] = {
             "keywords": keyword,
-            "location": profile.get("location", ""),
+            "location": self._resolve_source_location(profile),
         }
 
         distance = str(profile.get("distance_km") or "")
@@ -43,6 +67,23 @@ class JoobleSource:
 
         jobs = response.json().get("jobs", [])[:50]
         return [self._normalize_job(job) for job in jobs]
+
+    def _resolve_source_location(self, profile: dict[str, Any]) -> str:
+        """Sceglie la località più coerente da inviare a Jooble.
+
+        Se l'utente sceglie tutta la regione, inviare a Jooble la città di
+        partenza produrrebbe risultati molto diversi tra Salerno, Napoli e
+        Campania. In quel caso usiamo la regione, così la ricerca è coerente.
+        """
+
+        location = str(profile.get("location") or "")
+        distance = str(profile.get("distance_km") or "")
+        normalized_location = normalize_text(location)
+
+        if distance == "region":
+            return REGION_QUERY_BY_CITY.get(normalized_location, location)
+
+        return location
 
     def _normalize_job(self, job: dict[str, Any]) -> dict[str, Any]:
         return {

@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}Annunci — Radar Lavoro{% endblock %}
+
+{% block content %}
+<section class="hero">
+    <div class="hero-text">
+        <span class="eyebrow">{{ profile.location if profile.location else "Nessuna città impostata" }}</span>
+        <h1>Le offerte che ti riguardano, tutte in un posto solo.</h1>
+        <p class="hero-sub">{{ profile.queries|length }} ricerche attive &middot; aggiornato quando vuoi tu</p>
+    </div>
+    <form action="{{ url_for('aggiorna') }}" method="post">
+        <button type="submit" class="btn-primary">Cerca ora</button>
+    </form>
+</section>
+
+{% if not profile.location or not profile.jooble_api_key %}
+<div class="notice">
+    <strong>Configurazione incompleta.</strong>
+    Vai in <a href="{{ url_for('impostazioni') }}">Impostazioni</a> e imposta città e API key per iniziare a cercare.
+</div>
+{% endif %}
+
+<section class="stats-row">
+    <div class="stat-card">
+        <span class="stat-number">{{ nuovi|length }}</span>
+        <span class="stat-label">Nuovi annunci</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-number">{{ visti|length }}</span>
+        <span class="stat-label">Già visti</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-number">{{ profile.queries|length }}</span>
+        <span class="stat-label">Parole chiave</span>
+    </div>
+</section>
+
+<section class="register">
+    <div class="register-header">
+        <span class="stamp stamp-new">Nuovi</span>
+        <span class="count">{{ nuovi|length }}</span>
+        {% if nuovi %}
+        <form action="{{ url_for('segna_tutti_visti') }}" method="post" class="mark-all-form">
+            <button type="submit" class="btn-ghost">Segna tutti come visti</button>
+        </form>
+        {% endif %}
+    </div>
+
+    {% if nuovi %}
+        {% for job in nuovi %}
+        <article class="entry entry-new">
+            <div class="entry-protocol">
+                <span class="protocol-number">N. {{ '%04d'|format(job.id) }}</span>
+                <span class="protocol-date">{{ job.first_seen_at }}</span>
+            </div>
+            <div class="entry-body">
+                <h3>{{ job.title }}</h3>
+                <p class="entry-meta">{{ job.company }} &middot; {{ job.location }}</p>
+                {% if job.snippet %}<p class="entry-snippet">{{ job.snippet[:220] }}{% if job.snippet|length > 220 %}…{% endif %}</p>{% endif %}
+                <p class="entry-tag">trovato con: {{ job.matched_query }}</p>
+            </div>
+            <div class="entry-actions">
+                <a href="{{ job.link }}" target="_blank" rel="noopener" class="btn-secondary">Vedi annuncio</a>
+                <form action="{{ url_for('segna_visto', job_id=job.id) }}" method="post">
+                    <button type="submit" class="btn-ghost">Segna come visto</button>
+                </form>
+            </div>
+        </article>
+        {% endfor %}
+    {% else %}
+        <div class="empty-state">
+            <p>Nessuna novità al momento. Premi "Cerca ora" per controllare, oppure torna più tardi.</p>
+        </div>
+    {% endif %}
+</section>
+
+{% if visti %}
+<section class="register register-muted">
+    <div class="register-header">
+        <span class="stamp stamp-seen">Già visti</span>
+        <span class="count">{{ visti|length }}</span>
+    </div>
+    {% for job in visti[:20] %}
+    <article class="entry">
+        <div class="entry-protocol">
+            <span class="protocol-number">N. {{ '%04d'|format(job.id) }}</span>
+            <span class="protocol-date">{{ job.first_seen_at }}</span>
+        </div>
+        <div class="entry-body">
+            <h3>{{ job.title }}</h3>
+            <p class="entry-meta">{{ job.company }} &middot; {{ job.location }}</p>
+        </div>
+        <div class="entry-actions">
+            <a href="{{ job.link }}" target="_blank" rel="noopener" class="btn-secondary">Vedi annuncio</a>
+        </div>
+    </article>
+    {% endfor %}
+</section>
+{% endif %}
+{% endblock %}

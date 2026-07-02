@@ -1,39 +1,65 @@
 {% extends "base.html" %}
-{% block title %}Impostazioni — Radar Lavoro{% endblock %}
+{% block title %}Ricerca — Radar Lavoro{% endblock %}
 
 {% block content %}
 <section class="hero hero-compact">
     <div class="hero-text">
-        <span class="eyebrow">Configurazione</span>
+        <span class="eyebrow">Ricerca</span>
         <h1>Dove e cosa cerchiamo per te.</h1>
+        <p class="hero-sub">Imposta città, raggio geografico, parole chiave e fonti della ricerca.</p>
     </div>
 </section>
 
-<form method="post" class="form-card">
-    <div class="field">
-        <label for="location">La tua città</label>
-        <input type="text" id="location" name="location" value="{{ profile.location }}" placeholder="es. Salerno, Nocera Inferiore, Brescia...">
-        <p class="hint">Puoi anche allargare a una regione, es. "Campania".</p>
-    </div>
+<form method="post" class="form-card form-card-wide">
+    <section class="filter-section">
+        <h2>Area geografica</h2>
 
-    <div class="field">
-        <label for="jooble_api_key">API key Jooble</label>
-        <input type="text" id="jooble_api_key" name="jooble_api_key" value="{{ profile.jooble_api_key }}" placeholder="es. d267347c-c2c7-...">
-        <p class="hint">Deve provenire da <strong>it.jooble.org/api/about</strong> (dominio italiano).</p>
-    </div>
+        <div class="field">
+            <label for="location">Città di partenza</label>
+            <input type="text" id="location" name="location" value="{{ profile.location }}" placeholder="es. Nocera Inferiore, Salerno, Campania...">
+            <p class="hint">Usa una città precisa se vuoi risultati controllati. Esempio: "Nocera Inferiore".</p>
+        </div>
 
-    <div class="field">
-        <label for="queries">Parole chiave di ricerca</label>
-        <textarea id="queries" name="queries" rows="3">{{ profile.queries|join(', ') }}</textarea>
-        <p class="hint">Separale con una virgola. Sono già precompilate in base al tuo profilo (comunicazione, social media, digital) — modificale come preferisci.</p>
-    </div>
+        <div class="field">
+            <label for="distance_km">Distanza / area di ricerca</label>
+            <select id="distance_km" name="distance_km">
+                {% for value, label in profile.distance_options.items() %}
+                <option value="{{ value }}" {% if value == profile.distance_km %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+            <p class="hint">
+                "Solo città selezionata" mostra solo annunci localizzati nella città indicata. Per Nocera Inferiore ti consiglio di provare "Entro 20 km".
+            </p>
+        </div>
+    </section>
 
-    <div class="field">
-        <label for="exclude_keywords">Escludi dai risultati</label>
-        <textarea id="exclude_keywords" name="exclude_keywords" rows="2">{{ profile.exclude_keywords|join(', ') }}</textarea>
-        <p class="hint">Annunci il cui titolo contiene queste parole vengono scartati automaticamente.</p>
-    </div>
+    <section class="filter-section">
+        <h2>Fonte dati</h2>
+        <div class="field">
+            <label for="jooble_api_key">API key Jooble</label>
+            <input type="text" id="jooble_api_key" name="jooble_api_key" value="{{ profile.jooble_api_key }}" placeholder="es. d267347c-c2c7-...">
+            <p class="hint">Deve provenire da <strong>it.jooble.org/api/about</strong> (dominio italiano).</p>
+        </div>
+    </section>
 
-    <button type="submit" class="btn-primary">Salva impostazioni</button>
+    <section class="filter-section">
+        <h2>Professioni e parole chiave</h2>
+        <div class="field">
+            <label for="queries">Parole chiave di ricerca</label>
+            <textarea id="queries" name="queries" rows="4">{{ profile.queries|join(', ') }}</textarea>
+            <p class="hint">Separale con una virgola. Le keyword alimentano anche il punteggio di compatibilità.</p>
+        </div>
+
+        <div class="field">
+            <label for="exclude_keywords">Escludi dai risultati</label>
+            <textarea id="exclude_keywords" name="exclude_keywords" rows="4">{{ profile.exclude_keywords|join(', ') }}</textarea>
+            <p class="hint">Gli annunci che contengono queste parole nel titolo o nella descrizione vengono scartati automaticamente.</p>
+        </div>
+    </section>
+
+    <div class="form-actions">
+        <button type="submit" class="btn-primary">Salva ricerca</button>
+        <a href="{{ url_for('dashboard') }}" class="btn-secondary">Vai alla Dashboard</a>
+    </div>
 </form>
 {% endblock %}

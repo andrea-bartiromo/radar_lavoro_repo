@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}Profilo — Radar Lavoro{% endblock %}
+
+{% block content %}
+<section class="hero hero-compact">
+    <div class="hero-text">
+        <span class="eyebrow">Profilo professionale</span>
+        <h1>Il profilo che alimenta il ranking.</h1>
+        <p class="hero-sub">Radar usa queste informazioni per capire quali annunci sono davvero adatti a te.</p>
+    </div>
+</section>
+
+<section class="profile-grid">
+    <article class="panel-card profile-hero-card">
+        <div class="profile-big-avatar">AB</div>
+        <div>
+            <span class="section-kicker">Andrea Bartiromo</span>
+            <h2>Junior Full Stack Web Developer · Digital & Communication Specialist</h2>
+            <p>Profilo ibrido tra comunicazione, giornalismo, social media, sviluppo web, data analysis e tecnologie digitali.</p>
+            <div class="job-tags profile-tags">
+                <span class="job-tag purple">Categorie protette L.68/99</span>
+                <span class="job-tag">Nocera Inferiore</span>
+                <span class="job-tag">Patente B · automunito</span>
+                <span class="job-tag">Inglese B1</span>
+            </div>
+        </div>
+    </article>
+
+    <article class="panel-card">
+        <h3>🎓 Formazione</h3>
+        <ul class="timeline-list">
+            <li><strong>LM-92 Comunicazione d'impresa e comunicazione pubblica</strong><span>Prevista entro i primi mesi del 2027</span></li>
+            <li><strong>Laurea triennale in Scienze della Comunicazione</strong><span>Università degli Studi di Salerno</span></li>
+            <li><strong>Hackademy+ Aulab</strong><span>Full Stack Web Developer</span></li>
+        </ul>
+    </article>
+
+    <article class="panel-card">
+        <h3>💼 Esperienze</h3>
+        <ul class="timeline-list">
+            <li><strong>Apprendista giornalista · Nuovo Nocera</strong><span>2024 – attuale · articoli, interviste, fact-checking, contenuti digitali</span></li>
+            <li><strong>Social Media Manager · Università di Salerno</strong><span>2021 – 2022 · contenuti social, piano editoriale, community, analytics</span></li>
+        </ul>
+    </article>
+
+    <article class="panel-card profile-wide">
+        <h3>🧠 Competenze usate dal ranking</h3>
+        <div class="skill-cloud">
+            {% for skill in profile_data.skills %}<span>{{ skill }}</span>{% endfor %}
+        </div>
+    </article>
+
+    <article class="panel-card">
+        <h3>📜 Certificazioni</h3>
+        <ul class="check-list">
+            <li>Data Analyst · Fondazione Mondo Digitale</li>
+            <li>Sicurezza Informatica · Cisco</li>
+            <li>AI Avanzata · Profession AI</li>
+            <li>Python · Profession AI</li>
+            <li>EIPASS 7 Moduli User</li>
+        </ul>
+    </article>
+
+    <article class="panel-card ai-card">
+        <span class="beta">MATCHING</span>
+        <h3>Come Radar userà questo profilo</h3>
+        <p>Gli annunci riceveranno più punti se richiedono comunicazione, social media, giornalismo, sviluppo web, Python, data analysis, junior profile, categorie protette o lauree coerenti con LM-92.</p>
+    </article>
+</section>
+{% endblock %}

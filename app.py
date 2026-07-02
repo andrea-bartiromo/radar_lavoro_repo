@@ -10,7 +10,6 @@ Poi apri http://127.0.0.1:5000
 """
 
 import json
-import os
 import sqlite3
 from datetime import datetime
 from pathlib import Path
@@ -47,6 +46,19 @@ DEFAULT_EXCLUDE = [
     "venditore", "rappresentante", "ragazze immagine", "operatrice", "reception",
     "modell", "district manager", "area manager contratti", "beauty",
 ]
+
+WORK_MODE_OPTIONS = {
+    "remote": "Da remoto",
+    "hybrid": "Ibrido / misto",
+    "onsite": "In presenza",
+}
+
+EXPERIENCE_OPTIONS = {
+    "internship": "Stage / tirocinio",
+    "entry": "Junior / entry level",
+    "mid": "Intermedio",
+    "senior": "Senior",
+}
 
 RELEVANCE_TERMS = {
     "comunicazione digitale": ["comunicazion", "digital", "content", "media"],
@@ -94,7 +106,10 @@ def init_db():
             location TEXT DEFAULT '',
             queries TEXT DEFAULT '[]',
             exclude_keywords TEXT DEFAULT '[]',
-            jooble_api_key TEXT DEFAULT ''
+            jooble_api_key TEXT DEFAULT '',
+            distance_km TEXT DEFAULT '',
+            work_modes TEXT DEFAULT '[]',
+            experience_levels TEXT DEFAULT '[]'
         );
 
         CREATE TABLE IF NOT EXISTS jobs (
@@ -113,35 +128,66 @@ def init_db():
         );
         """
     )
+    ensure_column(conn, "profile", "distance_km", "TEXT DEFAULT ''")
+    ensure_column(conn, "profile", "work_modes", "TEXT DEFAULT '[]'")
+    ensure_column(conn, "profile", "experience_levels", "TEXT DEFAULT '[]'")
     ensure_column(conn, "jobs", "search_location", "TEXT")
     row = conn.execute("SELECT id FROM profile WHERE id = 1").fetchone()
     if row is None:
         conn.execute(
-            "INSERT INTO profile (id, location, queries, exclude_keywords) VALUES (1, ?, ?, ?)",
+            """INSERT INTO profile
+               (id, location, queries, exclude_keywords, distance_km, work_modes, experience_levels)
+               VALUES (1, ?, ?, ?, '', '[]', '[]')""",
             ("", json.dumps(DEFAULT_QUERIES), json.dumps(DEFAULT_EXCLUDE)),
         )
     conn.commit()
     conn.close()
 
 
+def load_json_list(value):
+    try:
+        parsed = json.loads(value or "[]")
+        return parsed if isinstance(parsed, list) else []
+    except json.JSONDecodeError:
+        return []
+
+
 def get_profile():
     conn = get_db()
     row = conn.execute("SELECT * FROM profile WHERE id = 1").fetchone()
     conn.close()
+    work_modes = load_json_list(row["work_modes"])
+    experience_levels = load_json_list(row["experience_levels"])
     return {
         "location": row["location"],
         "search_location": normalize_location(row["location"]),
-        "queries": json.loads(row["queries"]),
-        "exclude_keywords": json.loads(row["exclude_keywords"]),
+        "queries": load_json_list(row["queries"]),
+        "exclude_keywords": load_json_list(row["exclude_keywords"]),
         "jooble_api_key": row["jooble_api_key"],
+        "distance_km": row["distance_km"] or "",
+        "work_modes": work_modes,
+        "experience_levels": experience_levels,
+        "work_mode_options": WORK_MODE_OPTIONS,
+        "experience_options": EXPERIENCE_OPTIONS,
     }
 
 
-def save_profile(location, queries, exclude_keywords, jooble_api_key):
+def save_profile(location, queries, exclude_keywords, jooble_api_key, distance_km, work_modes, experience_levels):
     conn = get_db()
     conn.execute(
-        "UPDATE profile SET location=?, queries=?, exclude_keywords=?, jooble_api_key=? WHERE id=1",
-        (location, json.dumps(queries), json.dumps(exclude_keywords), jooble_api_key),
+        """UPDATE profile
+           SET location=?, queries=?, exclude_keywords=?, jooble_api_key=?,
+               distance_km=?, work_modes=?, experience_levels=?
+           WHERE id=1""",
+        (
+            location,
+            json.dumps(queries),
+            json.dumps(exclude_keywords),
+            jooble_api_key,
+            distance_km,
+            json.dumps(work_modes),
+            json.dumps(experience_levels),
+        ),
     )
     conn.commit()
     conn.close()
@@ -150,6 +196,19 @@ def save_profile(location, queries, exclude_keywords, jooble_api_key):
 # ----------------------------------------------------------------------
 # Ricerca annunci
 # ----------------------------------------------------------------------
+
+def testo_annuncio(job: dict) -> str:
+    return " ".join([
+        job.get("title") or "",
+        job.get("company") or "",
+        job.get("location") or "",
+        job.get("snippet") or "",
+    ]).lower()
+
+
+def contains_any(text: str, terms: list) -> bool:
+    return any(term in text for term in terms)
+
 
 def is_relevant(title: str, exclude_keywords: list) -> bool:
     title_lower = (title or "").lower()
@@ -172,12 +231,53 @@ def titolo_e_pertinente(title: str, query: str) -> bool:
     return any(t in title_lower for t in termini)
 
 
-def search_jooble(keyword: str, location: str, api_key: str) -> list:
-    url = JOOBLE_URL.format(key=api_key)
+def matches_work_modes(job: dict, selected_modes: list) -> bool:
+    if not selected_modes:
+        return True
+
+    text = testo_annuncio(job)
+    mode_terms = {
+        "remote": ["remoto", "remote", "smart working", "telelavoro", "home working", "da casa"],
+        "hybrid": ["ibrido", "ibrida", "hybrid", "misto", "mista", "parzialmente da remoto"],
+        "onsite": ["in sede", "in presenza", "on site", "onsite", "ufficio", "sede di lavoro"],
+    }
+    return any(contains_any(text, mode_terms.get(mode, [])) for mode in selected_modes)
+
+
+def matches_experience_levels(job: dict, selected_levels: list) -> bool:
+    if not selected_levels:
+        return True
+
+    text = testo_annuncio(job)
+    level_terms = {
+        "internship": ["stage", "tirocinio", "internship", "stagista", "curriculare", "extracurriculare"],
+        "entry": ["junior", "entry level", "neolaureato", "neolaureata", "apprendistato", "prima esperienza"],
+        "mid": ["middle", "intermedio", "2 anni", "3 anni", "esperienza pregressa", "specialist"],
+        "senior": ["senior", "lead", "responsabile", "coordinator", "coordinatore", "5 anni"],
+    }
+    return any(contains_any(text, level_terms.get(level, [])) for level in selected_levels)
+
+
+def passes_filters(job: dict, profile: dict) -> bool:
+    return (
+        matches_work_modes(job, profile["work_modes"])
+        and matches_experience_levels(job, profile["experience_levels"])
+    )
+
+
+def search_jooble(keyword: str, profile: dict) -> list:
+    url = JOOBLE_URL.format(key=profile["jooble_api_key"])
+    payload = {"keywords": keyword, "location": profile["location"]}
+
+    # Jooble può usare il raggio se supportato dalla chiave/API; in caso contrario
+    # la richiesta continua comunque a funzionare con città e parole chiave.
+    if profile["distance_km"]:
+        payload["radius"] = profile["distance_km"]
+
     try:
-        resp = requests.post(url, json={"keywords": keyword, "location": location}, timeout=20)
+        resp = requests.post(url, json=payload, timeout=20)
         resp.raise_for_status()
-        return resp.json().get("jobs", [])[:20]
+        return resp.json().get("jobs", [])[:40]
     except requests.RequestException:
         return []
 
@@ -196,26 +296,30 @@ def refresh_jobs():
     search_location = profile["search_location"]
 
     for keyword in profile["queries"]:
-        results = search_jooble(keyword, profile["location"], profile["jooble_api_key"])
+        results = search_jooble(keyword, profile)
         for job in results:
             link = job.get("link") or ""
             title = job.get("title") or "Senza titolo"
+            external_id = f"{search_location}|{link}"
+
             if not link or not is_relevant(title, profile["exclude_keywords"]):
                 continue
             if not titolo_e_pertinente(title, keyword):
                 continue
-            exists = conn.execute(
-                "SELECT id FROM jobs WHERE external_id = ? AND search_location = ?",
-                (link, search_location),
-            ).fetchone()
+            if not passes_filters(job, profile):
+                continue
+
+            exists = conn.execute("SELECT id FROM jobs WHERE external_id = ?", (external_id,)).fetchone()
             if exists:
                 continue
+
             conn.execute(
                 """INSERT INTO jobs (external_id, title, company, location, search_location, snippet, link,
                    updated, matched_query, status, first_seen_at)
                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'nuovo', ?)""",
                 (
-                    link, title,
+                    external_id,
+                    title,
                     job.get("company", "Azienda non specificata"),
                     job.get("location", ""),
                     search_location,
@@ -260,7 +364,7 @@ def aggiorna():
     if error:
         flash(error, "errore")
     else:
-        flash(f"{count} nuovi annunci trovati per questa area.", "successo")
+        flash(f"{count} nuovi annunci trovati per questa area e questi filtri.", "successo")
     return redirect(url_for("dashboard"))
 
 
@@ -297,9 +401,12 @@ def impostazioni():
         queries = [q.strip() for q in request.form.get("queries", "").split(",") if q.strip()]
         exclude = [q.strip() for q in request.form.get("exclude_keywords", "").split(",") if q.strip()]
         jooble_api_key = request.form.get("jooble_api_key", "").strip()
+        distance_km = request.form.get("distance_km", "").strip()
+        work_modes = [mode for mode in request.form.getlist("work_modes") if mode in WORK_MODE_OPTIONS]
+        experience_levels = [level for level in request.form.getlist("experience_levels") if level in EXPERIENCE_OPTIONS]
 
-        save_profile(location, queries, exclude, jooble_api_key)
-        flash("Impostazioni salvate. La dashboard mostrerà solo gli annunci della città impostata.", "successo")
+        save_profile(location, queries, exclude, jooble_api_key, distance_km, work_modes, experience_levels)
+        flash("Impostazioni salvate. La dashboard mostrerà solo gli annunci compatibili con area e filtri.", "successo")
         return redirect(url_for("impostazioni"))
 
     return render_template("impostazioni.html", profile=get_profile())

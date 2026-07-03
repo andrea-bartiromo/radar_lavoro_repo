@@ -11,26 +11,42 @@
 {% endmacro %}
 
 {% macro job_card(job, is_new=True) %}
+{% set score = job.compatibility_score or 0 %}
+
 <article class="job-card {{ 'is-new' if is_new else 'is-seen' }}">
-    <div class="company-logo">{{ (job.company or '?')[:2]|upper }}</div>
+    <div class="company-logo">
+        {{ (job.company or '?')[:2]|upper }}
+    </div>
 
     <div class="job-main">
         <div class="job-topline">
             <span class="job-id">N. {{ '%04d'|format(job.id) }}</span>
-            {% if is_new %}<span class="pill success">Nuovo</span>{% endif %}
-            <span class="pill application-status-tag status-{{ job.application_status }}">{{ job.application_status_label }}</span>
+
+            {% if is_new %}
+            <span class="pill success">Nuovo</span>
+            {% endif %}
+
+            <span class="pill application-status-tag status-{{ job.application_status }}">
+                {{ job.application_status_label }}
+            </span>
+
+            {% if job.first_seen_at %}
             <span class="job-date">{{ job.first_seen_at }}</span>
+            {% endif %}
         </div>
 
         <h3>{{ job.title }}</h3>
         <p class="entry-meta">{{ job.company }} &middot; {{ job.location }}</p>
 
         {% if job.snippet %}
-        <p class="entry-snippet">{{ job.snippet|striptags|replace('&nbsp;', ' ')|truncate(260) }}</p>
+        <p class="entry-snippet">
+            {{ job.snippet|striptags|replace('&nbsp;', ' ')|truncate(260) }}
+        </p>
         {% endif %}
 
         <div class="job-tags">
             <span class="job-tag purple">trovato con: {{ job.matched_query }}</span>
+
             {% if job.priority_reasons %}
                 {% for reason in job.priority_reasons %}
                 <span class="job-tag">{{ reason }}</span>
@@ -40,20 +56,31 @@
 
         {% if job.applied_at or job.last_status_at %}
         <div class="application-dates">
-            {% if job.applied_at %}<span>Candidatura: {{ job.applied_at }}</span>{% endif %}
-            {% if job.last_status_at %}<span>Aggiornato: {{ job.last_status_at }}</span>{% endif %}
+            {% if job.applied_at %}
+            <span>Candidatura: {{ job.applied_at }}</span>
+            {% endif %}
+
+            {% if job.last_status_at %}
+            <span>Aggiornato: {{ job.last_status_at }}</span>
+            {% endif %}
         </div>
         {% endif %}
     </div>
 
     <div class="job-score">
         <span class="score-label">Compatibilita</span>
-        <strong>{{ job.compatibility_score or 0 }}%</strong>
-        {{ stars(job.compatibility_score or 0) }}
+        <strong>{{ score }}%</strong>
+
+        {{ stars(score) }}
+
         <div class="score-bar" aria-hidden="true">
-            <span style="width: {{ job.compatibility_score or 0 }}%;"></span>
+            <span style="--score-width: {{ score }}%;"></span>
         </div>
-        <a href="{{ job.link }}" target="_blank" rel="noopener" class="btn-primary small">Vedi annuncio</a>
+
+        <a href="{{ job.link }}" target="_blank" rel="noopener" class="btn-primary small">
+            Vedi annuncio
+        </a>
+
         {% if is_new %}
         <form action="{{ url_for('segna_visto', job_id=job.id) }}" method="post">
             <button type="submit" class="btn-ghost small">Segna come visto</button>
@@ -64,17 +91,25 @@
     <form action="{{ url_for('aggiorna_candidatura', job_id=job.id) }}" method="post" class="application-form">
         <div class="application-field">
             <label for="application_status_{{ job.id }}">Stato candidatura</label>
+
             <select id="application_status_{{ job.id }}" name="application_status" class="application-select">
                 {% for value, label in application_status_options.items() %}
-                <option value="{{ value }}" {{ 'selected' if job.application_status == value else '' }}>{{ label }}</option>
+                <option value="{{ value }}" {{ 'selected' if job.application_status == value else '' }}>
+                    {{ label }}
+                </option>
                 {% endfor %}
             </select>
         </div>
+
         <div class="application-field notes-field">
             <label for="personal_notes_{{ job.id }}">Note personali</label>
+
             <textarea id="personal_notes_{{ job.id }}" name="personal_notes" class="application-notes" rows="3">{{ job.personal_notes or '' }}</textarea>
         </div>
-        <button type="submit" class="btn-secondary small btn-application-save">Salva candidatura</button>
+
+        <button type="submit" class="btn-secondary small btn-application-save">
+            Salva candidatura
+        </button>
     </form>
 </article>
 {% endmacro %}
@@ -84,10 +119,19 @@
     <div class="dashboard-main">
         <section class="hero hero-v2">
             <div>
-                <span class="eyebrow">{{ profile.location if profile.location else "Nessuna citta impostata" }}</span>
+                <span class="eyebrow">
+                    {{ profile.location if profile.location else "Nessuna citta impostata" }}
+                </span>
+
                 <h1>Ciao Andrea. Le offerte migliori, ordinate per compatibilita.</h1>
-                <p class="hero-sub">{{ profile.queries|length }} ricerche attive &middot; ranking personalizzato 0-100 &middot; CRM candidature attivo</p>
+
+                <p class="hero-sub">
+                    {{ profile.queries|length }} ricerche attive &middot;
+                    ranking personalizzato 0-100 &middot;
+                    CRM candidature attivo
+                </p>
             </div>
+
             <form action="{{ url_for('aggiorna') }}" method="post" class="hero-action">
                 <button type="submit" class="btn-primary">Cerca ora</button>
             </form>
@@ -96,7 +140,8 @@
         {% if not profile.location or not profile.jooble_api_key %}
         <div class="notice">
             <strong>Configurazione incompleta.</strong>
-            Vai in <a href="{{ url_for('impostazioni') }}">Ricerca</a> e imposta citta e API key per iniziare.
+            Vai in <a href="{{ url_for('impostazioni') }}">Ricerca</a>
+            e imposta citta e API key per iniziare.
         </div>
         {% endif %}
 
@@ -106,16 +151,19 @@
                 <span class="stat-number">{{ stats.nuovi }}</span>
                 <span class="stat-label">Nuovi</span>
             </div>
+
             <div class="stat-card green">
                 <span class="stat-icon">S</span>
                 <span class="stat-number">{{ stats.salvati }}</span>
                 <span class="stat-label">Salvati</span>
             </div>
+
             <div class="stat-card blue">
                 <span class="stat-icon">C</span>
                 <span class="stat-number">{{ stats.candidature_inviate }}</span>
                 <span class="stat-label">Candidature inviate</span>
             </div>
+
             <div class="stat-card orange">
                 <span class="stat-icon">I</span>
                 <span class="stat-number">{{ stats.colloqui }}</span>
@@ -129,6 +177,7 @@
                     <span class="section-kicker">Nuovi annunci</span>
                     <h2>{{ nuovi|length }} risultati da valutare</h2>
                 </div>
+
                 {% if nuovi %}
                 <form action="{{ url_for('segna_tutti_visti') }}" method="post" class="mark-all-form">
                     <button type="submit" class="btn-ghost">Segna tutti come visti</button>
@@ -154,6 +203,7 @@
                     <span class="section-kicker">CRM candidature</span>
                     <h2>Candidature e offerte seguite</h2>
                 </div>
+
                 <span class="count">{{ candidature|length }}</span>
             </div>
 
@@ -174,19 +224,56 @@
         <div class="panel-card radar-today">
             <span class="panel-icon">%</span>
             <h3>Il tuo radar oggi</h3>
+
+            {% set total_score = namespace(value=0) %}
+            {% set high_count = namespace(value=0) %}
+            {% set mid_count = namespace(value=0) %}
+            {% set low_count = namespace(value=0) %}
+
+            {% for job in nuovi %}
+                {% set job_score = job.compatibility_score or 0 %}
+                {% set total_score.value = total_score.value + job_score %}
+
+                {% if job_score >= 70 %}
+                    {% set high_count.value = high_count.value + 1 %}
+                {% elif job_score >= 40 %}
+                    {% set mid_count.value = mid_count.value + 1 %}
+                {% else %}
+                    {% set low_count.value = low_count.value + 1 %}
+                {% endif %}
+            {% endfor %}
+
             <div class="donut">
-                <span>{{ ((nuovi|sum(attribute='compatibility_score') / nuovi|length)|round|int) if nuovi else 0 }}%</span>
+                <span>
+                    {{ ((total_score.value / nuovi|length)|round|int) if nuovi else 0 }}%
+                </span>
                 <small>match medio</small>
             </div>
+
             <ul class="mini-list">
-                <li><span class="dot high"></span>Alta compatibilita <strong>{{ nuovi|selectattr('compatibility_score', 'ge', 70)|list|length }}</strong></li>
-                <li><span class="dot mid"></span>Media compatibilita <strong>{{ nuovi|selectattr('compatibility_score', 'ge', 40)|list|length }}</strong></li>
-                <li><span class="dot low"></span>Bassa compatibilita <strong>{{ nuovi|selectattr('compatibility_score', 'lt', 40)|list|length }}</strong></li>
+                <li>
+                    <span class="dot high"></span>
+                    Alta compatibilita
+                    <strong>{{ high_count.value }}</strong>
+                </li>
+
+                <li>
+                    <span class="dot mid"></span>
+                    Media compatibilita
+                    <strong>{{ mid_count.value }}</strong>
+                </li>
+
+                <li>
+                    <span class="dot low"></span>
+                    Bassa compatibilita
+                    <strong>{{ low_count.value }}</strong>
+                </li>
             </ul>
         </div>
 
         <div class="panel-card">
             <h3>Perche questi annunci?</h3>
+
             <ul class="check-list">
                 <li>Coincidono con le tue competenze</li>
                 <li>Filtri geografici applicati</li>
@@ -197,8 +284,11 @@
 
         <div class="panel-card keywords-card">
             <h3>Parole chiave attive</h3>
+
             <div class="keyword-cloud">
-                {% for query in profile.queries %}<span>{{ query }}</span>{% endfor %}
+                {% for query in profile.queries %}
+                <span>{{ query }}</span>
+                {% endfor %}
             </div>
         </div>
 

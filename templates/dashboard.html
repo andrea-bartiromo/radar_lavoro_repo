@@ -1,38 +1,41 @@
 {% extends "base.html" %}
 {% block title %}Dashboard - Radar Lavoro{% endblock %}
 
-{% macro job_card(job, is_new=True) %}
-<article class="entry job-card {{ 'entry-new' if is_new else '' }}">
-    <div class="score-panel">
-        <span class="score-label">Compatibilita</span>
-        <strong class="score-value">{{ job.compatibility_score or 0 }}%</strong>
-        <div class="score-bar" aria-hidden="true">
-            <span style="width: {{ job.compatibility_score or 0 }}%;"></span>
-        </div>
-        <span class="protocol-number">N. {{ '%04d'|format(job.id) }}</span>
-        <span class="protocol-date">{{ job.first_seen_at }}</span>
-    </div>
+{% macro stars(score) %}
+    {% set filled = ((score or 0) / 20)|round(0, 'floor')|int %}
+    <span class="stars" aria-label="{{ filled }} stelle su 5">
+        {% for i in range(1, 6) %}
+            <span class="{{ 'on' if i <= filled else '' }}">{{ '*' if i <= filled else '-' }}</span>
+        {% endfor %}
+    </span>
+{% endmacro %}
 
-    <div class="entry-body">
-        <div class="job-heading">
-            <div>
-                <h3>{{ job.title }}</h3>
-                <p class="entry-meta">{{ job.company }} &middot; {{ job.location }}</p>
-            </div>
+{% macro job_card(job, is_new=True) %}
+<article class="job-card {{ 'is-new' if is_new else 'is-seen' }}">
+    <div class="company-logo">{{ (job.company or '?')[:2]|upper }}</div>
+
+    <div class="job-main">
+        <div class="job-topline">
+            <span class="job-id">N. {{ '%04d'|format(job.id) }}</span>
+            {% if is_new %}<span class="pill success">Nuovo</span>{% endif %}
+            <span class="pill application-status-tag status-{{ job.application_status }}">{{ job.application_status_label }}</span>
+            <span class="job-date">{{ job.first_seen_at }}</span>
         </div>
+
+        <h3>{{ job.title }}</h3>
+        <p class="entry-meta">{{ job.company }} &middot; {{ job.location }}</p>
 
         {% if job.snippet %}
         <p class="entry-snippet">{{ job.snippet|striptags|replace('&nbsp;', ' ')|truncate(260) }}</p>
         {% endif %}
 
         <div class="job-tags">
-            <span class="job-tag">trovato con: {{ job.matched_query }}</span>
+            <span class="job-tag purple">trovato con: {{ job.matched_query }}</span>
             {% if job.priority_reasons %}
                 {% for reason in job.priority_reasons %}
-                <span class="job-tag job-tag-strong">{{ reason }}</span>
+                <span class="job-tag">{{ reason }}</span>
                 {% endfor %}
             {% endif %}
-            <span class="job-tag application-status-tag status-{{ job.application_status }}">{{ job.application_status_label }}</span>
         </div>
 
         {% if job.applied_at or job.last_status_at %}
@@ -43,109 +46,167 @@
         {% endif %}
     </div>
 
-    <div class="entry-actions application-panel">
-        <form action="{{ url_for('aggiorna_candidatura', job_id=job.id) }}" method="post" class="application-form">
-            <div class="application-field">
-                <label for="application_status_{{ job.id }}">Stato candidatura</label>
-                <select id="application_status_{{ job.id }}" name="application_status" class="application-select">
-                    {% for value, label in application_status_options.items() %}
-                    <option value="{{ value }}" {{ 'selected' if job.application_status == value else '' }}>{{ label }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="application-field">
-                <label for="personal_notes_{{ job.id }}">Note personali</label>
-                <textarea id="personal_notes_{{ job.id }}" name="personal_notes" class="application-notes" rows="4">{{ job.personal_notes or '' }}</textarea>
-            </div>
-            <button type="submit" class="btn-primary btn-application-save">Salva candidatura</button>
-        </form>
-
-        <div class="job-link-actions">
-            <a href="{{ job.link }}" target="_blank" rel="noopener" class="btn-secondary">Vedi annuncio</a>
-            {% if is_new %}
-            <form action="{{ url_for('segna_visto', job_id=job.id) }}" method="post">
-                <button type="submit" class="btn-ghost">Segna come visto</button>
-            </form>
-            {% endif %}
+    <div class="job-score">
+        <span class="score-label">Compatibilita</span>
+        <strong>{{ job.compatibility_score or 0 }}%</strong>
+        {{ stars(job.compatibility_score or 0) }}
+        <div class="score-bar" aria-hidden="true">
+            <span style="width: {{ job.compatibility_score or 0 }}%;"></span>
         </div>
-    </div>
-</article>
-{% endmacro %}
-
-{% block content %}
-<section class="hero">
-    <div class="hero-text">
-        <span class="eyebrow">{{ profile.location if profile.location else "Nessuna citta impostata" }}</span>
-        <h1>Le offerte migliori, ordinate per compatibilita.</h1>
-        <p class="hero-sub">{{ profile.queries|length }} ricerche attive &middot; ranking personalizzato 0-100 &middot; CRM candidature attivo</p>
-    </div>
-    <form action="{{ url_for('aggiorna') }}" method="post">
-        <button type="submit" class="btn-primary">Cerca ora</button>
-    </form>
-</section>
-
-{% if not profile.location or not profile.jooble_api_key %}
-<div class="notice">
-    <strong>Configurazione incompleta.</strong>
-    Vai in <a href="{{ url_for('impostazioni') }}">Ricerca</a> e imposta citta e API key per iniziare a cercare.
-</div>
-{% endif %}
-
-<section class="stats-row stats-row-four">
-    <div class="stat-card">
-        <span class="stat-number">{{ stats.nuovi }}</span>
-        <span class="stat-label">Nuovi</span>
-    </div>
-    <div class="stat-card">
-        <span class="stat-number">{{ stats.salvati }}</span>
-        <span class="stat-label">Salvati</span>
-    </div>
-    <div class="stat-card">
-        <span class="stat-number">{{ stats.candidature_inviate }}</span>
-        <span class="stat-label">Candidature inviate</span>
-    </div>
-    <div class="stat-card">
-        <span class="stat-number">{{ stats.colloqui }}</span>
-        <span class="stat-label">Colloqui</span>
-    </div>
-</section>
-
-<section class="register">
-    <div class="register-header">
-        <span class="stamp stamp-new">Nuovi</span>
-        <span class="count">{{ nuovi|length }}</span>
-        {% if nuovi %}
-        <form action="{{ url_for('segna_tutti_visti') }}" method="post" class="mark-all-form">
-            <button type="submit" class="btn-ghost">Segna tutti come visti</button>
+        <a href="{{ job.link }}" target="_blank" rel="noopener" class="btn-primary small">Vedi annuncio</a>
+        {% if is_new %}
+        <form action="{{ url_for('segna_visto', job_id=job.id) }}" method="post">
+            <button type="submit" class="btn-ghost small">Segna come visto</button>
         </form>
         {% endif %}
     </div>
 
-    {% if nuovi %}
-        {% for job in nuovi %}
-            {{ job_card(job, True) }}
-        {% endfor %}
-    {% else %}
-        <div class="empty-state">
-            <p>Nessuna novita al momento. Premi "Cerca ora" per controllare, oppure modifica i filtri avanzati.</p>
+    <form action="{{ url_for('aggiorna_candidatura', job_id=job.id) }}" method="post" class="application-form">
+        <div class="application-field">
+            <label for="application_status_{{ job.id }}">Stato candidatura</label>
+            <select id="application_status_{{ job.id }}" name="application_status" class="application-select">
+                {% for value, label in application_status_options.items() %}
+                <option value="{{ value }}" {{ 'selected' if job.application_status == value else '' }}>{{ label }}</option>
+                {% endfor %}
+            </select>
         </div>
-    {% endif %}
-</section>
+        <div class="application-field notes-field">
+            <label for="personal_notes_{{ job.id }}">Note personali</label>
+            <textarea id="personal_notes_{{ job.id }}" name="personal_notes" class="application-notes" rows="3">{{ job.personal_notes or '' }}</textarea>
+        </div>
+        <button type="submit" class="btn-secondary small btn-application-save">Salva candidatura</button>
+    </form>
+</article>
+{% endmacro %}
 
-<section class="register register-muted">
-    <div class="register-header">
-        <span class="stamp stamp-seen">Candidature e offerte seguite</span>
-        <span class="count">{{ candidature|length }}</span>
+{% block content %}
+<section class="dashboard-layout">
+    <div class="dashboard-main">
+        <section class="hero hero-v2">
+            <div>
+                <span class="eyebrow">{{ profile.location if profile.location else "Nessuna citta impostata" }}</span>
+                <h1>Ciao Andrea. Le offerte migliori, ordinate per compatibilita.</h1>
+                <p class="hero-sub">{{ profile.queries|length }} ricerche attive &middot; ranking personalizzato 0-100 &middot; CRM candidature attivo</p>
+            </div>
+            <form action="{{ url_for('aggiorna') }}" method="post" class="hero-action">
+                <button type="submit" class="btn-primary">Cerca ora</button>
+            </form>
+        </section>
+
+        {% if not profile.location or not profile.jooble_api_key %}
+        <div class="notice">
+            <strong>Configurazione incompleta.</strong>
+            Vai in <a href="{{ url_for('impostazioni') }}">Ricerca</a> e imposta citta e API key per iniziare.
+        </div>
+        {% endif %}
+
+        <section class="stats-row stats-row-four">
+            <div class="stat-card violet">
+                <span class="stat-icon">N</span>
+                <span class="stat-number">{{ stats.nuovi }}</span>
+                <span class="stat-label">Nuovi</span>
+            </div>
+            <div class="stat-card green">
+                <span class="stat-icon">S</span>
+                <span class="stat-number">{{ stats.salvati }}</span>
+                <span class="stat-label">Salvati</span>
+            </div>
+            <div class="stat-card blue">
+                <span class="stat-icon">C</span>
+                <span class="stat-number">{{ stats.candidature_inviate }}</span>
+                <span class="stat-label">Candidature inviate</span>
+            </div>
+            <div class="stat-card orange">
+                <span class="stat-icon">I</span>
+                <span class="stat-number">{{ stats.colloqui }}</span>
+                <span class="stat-label">Colloqui</span>
+            </div>
+        </section>
+
+        <section class="register">
+            <div class="register-header">
+                <div>
+                    <span class="section-kicker">Nuovi annunci</span>
+                    <h2>{{ nuovi|length }} risultati da valutare</h2>
+                </div>
+                {% if nuovi %}
+                <form action="{{ url_for('segna_tutti_visti') }}" method="post" class="mark-all-form">
+                    <button type="submit" class="btn-ghost">Segna tutti come visti</button>
+                </form>
+                {% endif %}
+            </div>
+
+            {% if nuovi %}
+                {% for job in nuovi %}
+                    {{ job_card(job, True) }}
+                {% endfor %}
+            {% else %}
+                <div class="empty-state">
+                    <strong>Nessuna novita al momento.</strong>
+                    <p>Premi "Cerca ora" oppure allarga leggermente l'area di ricerca.</p>
+                </div>
+            {% endif %}
+        </section>
+
+        <section class="register register-muted">
+            <div class="register-header">
+                <div>
+                    <span class="section-kicker">CRM candidature</span>
+                    <h2>Candidature e offerte seguite</h2>
+                </div>
+                <span class="count">{{ candidature|length }}</span>
+            </div>
+
+            {% if candidature %}
+                {% for job in candidature %}
+                    {{ job_card(job, False) }}
+                {% endfor %}
+            {% else %}
+                <div class="empty-state">
+                    <strong>Nessuna offerta seguita.</strong>
+                    <p>Le offerte salvate, viste o candidate compariranno qui.</p>
+                </div>
+            {% endif %}
+        </section>
     </div>
 
-    {% if candidature %}
-        {% for job in candidature %}
-            {{ job_card(job, False) }}
-        {% endfor %}
-    {% else %}
-        <div class="empty-state">
-            <p>Le offerte salvate, viste o candidate compariranno qui.</p>
+    <aside class="insights-panel">
+        <div class="panel-card radar-today">
+            <span class="panel-icon">%</span>
+            <h3>Il tuo radar oggi</h3>
+            <div class="donut">
+                <span>{{ ((nuovi|sum(attribute='compatibility_score') / nuovi|length)|round|int) if nuovi else 0 }}%</span>
+                <small>match medio</small>
+            </div>
+            <ul class="mini-list">
+                <li><span class="dot high"></span>Alta compatibilita <strong>{{ nuovi|selectattr('compatibility_score', 'ge', 70)|list|length }}</strong></li>
+                <li><span class="dot mid"></span>Media compatibilita <strong>{{ nuovi|selectattr('compatibility_score', 'ge', 40)|list|length }}</strong></li>
+                <li><span class="dot low"></span>Bassa compatibilita <strong>{{ nuovi|selectattr('compatibility_score', 'lt', 40)|list|length }}</strong></li>
+            </ul>
         </div>
-    {% endif %}
+
+        <div class="panel-card">
+            <h3>Perche questi annunci?</h3>
+            <ul class="check-list">
+                <li>Coincidono con le tue competenze</li>
+                <li>Filtri geografici applicati</li>
+                <li>Priorita a remoto, RAL e L.68/99</li>
+                <li>Duplicati ridotti automaticamente</li>
+            </ul>
+        </div>
+
+        <div class="panel-card keywords-card">
+            <h3>Parole chiave attive</h3>
+            <div class="keyword-cloud">
+                {% for query in profile.queries %}<span>{{ query }}</span>{% endfor %}
+            </div>
+        </div>
+
+        <div class="panel-card ai-card">
+            <span class="beta">BETA</span>
+            <h3>Radar AI</h3>
+            <p>Presto aiutera a leggere gli annunci, preparare candidature e migliorare il CV.</p>
+        </div>
+    </aside>
 </section>
 {% endblock %}

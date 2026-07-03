@@ -67,11 +67,15 @@ def split_jobs_by_application_status(jobs: list[dict]) -> tuple[list[dict], list
     enriched = [enrich_job_for_application(job) for job in jobs]
     nuovi = [job for job in enriched if job["application_status"] == "nuovo"]
     seguiti = [job for job in enriched if job["application_status"] != "nuovo"]
+    candidature_inviate = len([
+        job for job in enriched if job["application_status"] == "candidatura_inviata"
+    ])
     stats = {
         "nuovi": len(nuovi),
         "salvati": len([job for job in enriched if job["application_status"] == "salvato"]),
         "cv_preparati": len([job for job in enriched if job["application_status"] == "cv_preparato"]),
-        "candidate": len([job for job in enriched if job["application_status"] == "candidatura_inviata"]),
+        "candidate": candidature_inviate,
+        "candidature_inviate": candidature_inviate,
         "colloqui": len([job for job in enriched if job["application_status"] == "colloquio"]),
         "scartati": len([job for job in enriched if job["application_status"] == "scartato"]),
         "assunzioni": len([job for job in enriched if job["application_status"] == "assunto"]),
@@ -102,8 +106,12 @@ def update_application(conn, job_id: int, search_location: str, form: Mapping[st
                personal_notes = ?,
                applied_at = ?,
                last_status_at = ?,
-               status = CASE WHEN status = 'nuovo' THEN 'visto' ELSE status END
+               status = CASE
+                   WHEN ? = 'nuovo' THEN 'nuovo'
+                   WHEN status = 'nuovo' THEN 'visto'
+                   ELSE status
+               END
          WHERE id = ? AND search_location = ?
         """,
-        (new_status, notes, applied_at, now, job_id, search_location),
+        (new_status, notes, applied_at, now, new_status, job_id, search_location),
     )

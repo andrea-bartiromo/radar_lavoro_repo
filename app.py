@@ -20,6 +20,13 @@ from pathlib import Path
 import requests
 from flask import Flask, render_template, request, redirect, url_for, flash
 
+from radar_candidates import (
+    APPLICATION_STATUS_OPTIONS,
+    enrich_job_for_application,
+    split_jobs_by_application_status,
+    update_application,
+)
+
 BASE_DIR = Path(__file__).parent
 DB_PATH = BASE_DIR / "radar_lavoro.db"
 JOOBLE_URL = "https://it.jooble.org/api/{key}"
@@ -212,6 +219,10 @@ def init_db():
             compatibility_score INTEGER DEFAULT 0,
             priority_reasons TEXT DEFAULT '[]',
             status TEXT DEFAULT 'nuovo',
+            application_status TEXT DEFAULT 'nuovo',
+            personal_notes TEXT DEFAULT '',
+            applied_at TEXT DEFAULT '',
+            last_status_at TEXT DEFAULT '',
             first_seen_at TEXT
         );
         """
@@ -229,8 +240,17 @@ def init_db():
     for column, definition in [
         ("search_location", "TEXT"), ("canonical_key", "TEXT"),
         ("compatibility_score", "INTEGER DEFAULT 0"), ("priority_reasons", "TEXT DEFAULT '[]'"),
+        ("application_status", "TEXT DEFAULT 'nuovo'"), ("personal_notes", "TEXT DEFAULT ''"),
+        ("applied_at", "TEXT DEFAULT ''"), ("last_status_at", "TEXT DEFAULT ''"),
     ]:
         ensure_column(conn, "jobs", column, definition)
+    conn.execute(
+        """
+        UPDATE jobs
+           SET application_status = COALESCE(NULLIF(status, ''), 'nuovo')
+         WHERE application_status IS NULL OR application_status = ''
+        """
+    )
     row = conn.execute("SELECT id FROM profile WHERE id = 1").fetchone()
     if row is None:
         conn.execute(
@@ -611,7 +631,7 @@ def refresh_jobs():
 def row_to_job(row):
     job = dict(row)
     job["priority_reasons"] = load_json_list(job.get("priority_reasons"))
-    return job
+    return enrich_job_for_application(job)
 
 
 @app.route("/")
@@ -629,9 +649,15 @@ def dashboard():
         # Nasconde anche gli annunci vecchi che non rispettano più distanza/rilevanza dopo il cambio filtri.
         if passes_filters(job, profile, job.get("matched_query") or ""):
             filtered_jobs.append(job)
-    nuovi = [j for j in filtered_jobs if j["status"] == "nuovo"]
-    visti = [j for j in filtered_jobs if j["status"] != "nuovo"]
-    return render_template("dashboard.html", nuovi=nuovi, visti=visti, profile=profile)
+    nuovi, candidature, stats = split_jobs_by_application_status(filtered_jobs)
+    return render_template(
+        "dashboard.html",
+        nuovi=nuovi,
+        candidature=candidature,
+        stats=stats,
+        application_status_options=APPLICATION_STATUS_OPTIONS,
+        profile=profile,
+    )
 
 
 @app.route("/aggiorna", methods=["POST"])
@@ -644,11 +670,30 @@ def aggiorna():
     return redirect(url_for("dashboard"))
 
 
+@app.route("/candidatura/<int:job_id>", methods=["POST"])
+def aggiorna_candidatura(job_id):
+    profile = get_profile()
+    conn = get_db()
+    update_application(conn, job_id, profile["search_location"], request.form)
+    conn.commit()
+    conn.close()
+    flash("Candidatura aggiornata.", "successo")
+    return redirect(url_for("dashboard"))
+
+
 @app.route("/segna-visto/<int:job_id>", methods=["POST"])
 def segna_visto(job_id):
     profile = get_profile()
     conn = get_db()
-    conn.execute("UPDATE jobs SET status = 'visto' WHERE id = ? AND search_location = ?", (job_id, profile["search_location"]))
+    now = datetime.now().isoformat(timespec="minutes")
+    conn.execute(
+        """UPDATE jobs
+              SET status = 'visto',
+                  application_status = 'visto',
+                  last_status_at = ?
+            WHERE id = ? AND search_location = ?""",
+        (now, job_id, profile["search_location"]),
+    )
     conn.commit()
     conn.close()
     return redirect(url_for("dashboard"))
@@ -658,7 +703,17 @@ def segna_visto(job_id):
 def segna_tutti_visti():
     profile = get_profile()
     conn = get_db()
-    conn.execute("UPDATE jobs SET status = 'visto' WHERE status = 'nuovo' AND search_location = ?", (profile["search_location"],))
+    now = datetime.now().isoformat(timespec="minutes")
+    conn.execute(
+        """UPDATE jobs
+              SET status = 'visto',
+                  application_status = 'visto',
+                  last_status_at = ?
+            WHERE status = 'nuovo'
+              AND COALESCE(NULLIF(application_status, ''), 'nuovo') = 'nuovo'
+              AND search_location = ?""",
+        (now, profile["search_location"]),
+    )
     conn.commit()
     conn.close()
     return redirect(url_for("dashboard"))

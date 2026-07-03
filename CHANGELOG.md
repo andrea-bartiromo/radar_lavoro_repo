@@ -2,6 +2,27 @@
 
 Tutte le modifiche importanti al progetto verranno annotate qui.
 
+## Fase 1 - CRM candidature
+
+### Aggiunto
+
+- Integrato `radar_candidates.py` in `app.py` per stati candidatura, arricchimento annunci, split dashboard e aggiornamento candidature.
+- Estesa la tabella `jobs` con `application_status`, `personal_notes`, `applied_at` e `last_status_at`, mantenendo compatibilita con il campo storico `status`.
+- Aggiunta la route `POST /candidatura/<job_id>` per salvare stato candidatura e note personali.
+- Aggiornate le azioni "segna visto" e "segna tutti come visti" per sincronizzare anche lo stato candidatura e la data ultimo aggiornamento.
+- Aggiornata la dashboard con sezioni "Nuovi" e "Candidature e offerte seguite", statistiche rapide, tag stato, date candidatura, select stato e textarea note.
+- Aggiunti stili CSS per form candidatura, note, select, tag stato e date.
+
+### File modificati
+
+- `app.py`
+- `radar_candidates.py`
+- `templates/dashboard.html`
+- `static/style.css`
+- `README.md`
+- `ROADMAP.md`
+- `CHANGELOG.md`
+
 ## Prima sessione di ripresa sviluppo
 
 ### Aggiunto

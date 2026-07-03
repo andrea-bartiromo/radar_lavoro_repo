@@ -18,8 +18,8 @@ Radar Lavoro e una web app locale in Flask pensata per un solo utente. La versio
 
 Obiettivo: rendere l'app comoda e affidabile per l'uso quotidiano sul PC.
 
-- [ ] Aggiungere gestione candidatura: salvata, candidatura inviata, colloquio, scartata.
-- [ ] Aggiungere note personali per ogni annuncio.
+- [x] Aggiungere gestione candidatura: salvata, candidatura inviata, colloquio, scartata.
+- [x] Aggiungere note personali per ogni annuncio.
 - [ ] Aggiungere filtro in dashboard per stato candidatura.
 - [ ] Aggiungere pulsante per archiviare o scartare offerte non interessanti.
 - [ ] Migliorare messaggi di errore quando Jooble non risponde.

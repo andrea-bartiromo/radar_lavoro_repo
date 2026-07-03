@@ -1,10 +1,10 @@
 {% extends "base.html" %}
-{% block title %}Dashboard — Radar Lavoro{% endblock %}
+{% block title %}Dashboard - Radar Lavoro{% endblock %}
 
 {% macro job_card(job, is_new=True) %}
 <article class="entry job-card {{ 'entry-new' if is_new else '' }}">
     <div class="score-panel">
-        <span class="score-label">Compatibilità</span>
+        <span class="score-label">Compatibilita</span>
         <strong class="score-value">{{ job.compatibility_score or 0 }}%</strong>
         <div class="score-bar" aria-hidden="true">
             <span style="width: {{ job.compatibility_score or 0 }}%;"></span>
@@ -32,16 +32,42 @@
                 <span class="job-tag job-tag-strong">{{ reason }}</span>
                 {% endfor %}
             {% endif %}
+            <span class="job-tag application-status-tag status-{{ job.application_status }}">{{ job.application_status_label }}</span>
         </div>
+
+        {% if job.applied_at or job.last_status_at %}
+        <div class="application-dates">
+            {% if job.applied_at %}<span>Candidatura: {{ job.applied_at }}</span>{% endif %}
+            {% if job.last_status_at %}<span>Aggiornato: {{ job.last_status_at }}</span>{% endif %}
+        </div>
+        {% endif %}
     </div>
 
-    <div class="entry-actions">
-        <a href="{{ job.link }}" target="_blank" rel="noopener" class="btn-secondary">Vedi annuncio</a>
-        {% if is_new %}
-        <form action="{{ url_for('segna_visto', job_id=job.id) }}" method="post">
-            <button type="submit" class="btn-ghost">Segna come visto</button>
+    <div class="entry-actions application-panel">
+        <form action="{{ url_for('aggiorna_candidatura', job_id=job.id) }}" method="post" class="application-form">
+            <div class="application-field">
+                <label for="application_status_{{ job.id }}">Stato candidatura</label>
+                <select id="application_status_{{ job.id }}" name="application_status" class="application-select">
+                    {% for value, label in application_status_options.items() %}
+                    <option value="{{ value }}" {{ 'selected' if job.application_status == value else '' }}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="application-field">
+                <label for="personal_notes_{{ job.id }}">Note personali</label>
+                <textarea id="personal_notes_{{ job.id }}" name="personal_notes" class="application-notes" rows="4">{{ job.personal_notes or '' }}</textarea>
+            </div>
+            <button type="submit" class="btn-primary btn-application-save">Salva candidatura</button>
         </form>
-        {% endif %}
+
+        <div class="job-link-actions">
+            <a href="{{ job.link }}" target="_blank" rel="noopener" class="btn-secondary">Vedi annuncio</a>
+            {% if is_new %}
+            <form action="{{ url_for('segna_visto', job_id=job.id) }}" method="post">
+                <button type="submit" class="btn-ghost">Segna come visto</button>
+            </form>
+            {% endif %}
+        </div>
     </div>
 </article>
 {% endmacro %}
@@ -49,9 +75,9 @@
 {% block content %}
 <section class="hero">
     <div class="hero-text">
-        <span class="eyebrow">{{ profile.location if profile.location else "Nessuna città impostata" }}</span>
-        <h1>Le offerte migliori, ordinate per compatibilità.</h1>
-        <p class="hero-sub">{{ profile.queries|length }} ricerche attive &middot; ranking personalizzato 0–100 &middot; filtri avanzati attivi</p>
+        <span class="eyebrow">{{ profile.location if profile.location else "Nessuna citta impostata" }}</span>
+        <h1>Le offerte migliori, ordinate per compatibilita.</h1>
+        <p class="hero-sub">{{ profile.queries|length }} ricerche attive &middot; ranking personalizzato 0-100 &middot; CRM candidature attivo</p>
     </div>
     <form action="{{ url_for('aggiorna') }}" method="post">
         <button type="submit" class="btn-primary">Cerca ora</button>
@@ -61,26 +87,26 @@
 {% if not profile.location or not profile.jooble_api_key %}
 <div class="notice">
     <strong>Configurazione incompleta.</strong>
-    Vai in <a href="{{ url_for('impostazioni') }}">Ricerca</a> e imposta città e API key per iniziare a cercare.
+    Vai in <a href="{{ url_for('impostazioni') }}">Ricerca</a> e imposta citta e API key per iniziare a cercare.
 </div>
 {% endif %}
 
 <section class="stats-row stats-row-four">
     <div class="stat-card">
-        <span class="stat-number">{{ nuovi|length }}</span>
-        <span class="stat-label">Nuovi annunci</span>
+        <span class="stat-number">{{ stats.nuovi }}</span>
+        <span class="stat-label">Nuovi</span>
     </div>
     <div class="stat-card">
-        <span class="stat-number">{{ visti|length }}</span>
-        <span class="stat-label">Già visti</span>
+        <span class="stat-number">{{ stats.salvati }}</span>
+        <span class="stat-label">Salvati</span>
     </div>
     <div class="stat-card">
-        <span class="stat-number">{{ profile.queries|length }}</span>
-        <span class="stat-label">Parole chiave</span>
+        <span class="stat-number">{{ stats.candidature_inviate }}</span>
+        <span class="stat-label">Candidature inviate</span>
     </div>
     <div class="stat-card">
-        <span class="stat-number">{{ 'ON' if profile.compatibility_enabled else 'OFF' }}</span>
-        <span class="stat-label">Ranking</span>
+        <span class="stat-number">{{ stats.colloqui }}</span>
+        <span class="stat-label">Colloqui</span>
     </div>
 </section>
 
@@ -101,20 +127,25 @@
         {% endfor %}
     {% else %}
         <div class="empty-state">
-            <p>Nessuna novità al momento. Premi "Cerca ora" per controllare, oppure modifica i filtri avanzati.</p>
+            <p>Nessuna novita al momento. Premi "Cerca ora" per controllare, oppure modifica i filtri avanzati.</p>
         </div>
     {% endif %}
 </section>
 
-{% if visti %}
 <section class="register register-muted">
     <div class="register-header">
-        <span class="stamp stamp-seen">Già visti</span>
-        <span class="count">{{ visti|length }}</span>
+        <span class="stamp stamp-seen">Candidature e offerte seguite</span>
+        <span class="count">{{ candidature|length }}</span>
     </div>
-    {% for job in visti[:20] %}
-        {{ job_card(job, False) }}
-    {% endfor %}
+
+    {% if candidature %}
+        {% for job in candidature %}
+            {{ job_card(job, False) }}
+        {% endfor %}
+    {% else %}
+        <div class="empty-state">
+            <p>Le offerte salvate, viste o candidate compariranno qui.</p>
+        </div>
+    {% endif %}
 </section>
-{% endif %}
 {% endblock %}

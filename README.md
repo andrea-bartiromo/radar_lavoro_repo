@@ -1,10 +1,8 @@
-# Radar Lavoro — il tuo aggregatore personale
+# Radar Lavoro - il tuo aggregatore personale
 
-Versione semplificata, pensata per un solo utente: nessun account, nessun
-login, nessuna complessità multi-utente. Cerca offerte di lavoro nella città
-che scegli tu, con parole chiave già precompilate in base al tuo profilo
-(comunicazione, social media, digital, giornalismo), e ti mostra solo le
-novità con un'interfaccia pulita.
+Radar Lavoro e una web app Flask locale, pensata per un solo utente: nessun account, nessun login, nessun cloud. Cerca offerte di lavoro tramite Jooble, filtra i risultati poco pertinenti, ordina gli annunci per compatibilita con il profilo di Andrea Bartiromo e ora include anche un piccolo CRM candidature.
+
+Il progetto resta orientato a opportunita di comunicazione digitale, social media, giornalismo, digital marketing, posizioni junior, remoto/ibrido e categorie protette L.68/99.
 
 ## Installazione
 
@@ -18,30 +16,55 @@ pip install -r requirements.txt
 python app.py
 ```
 
-Poi apri **http://127.0.0.1:5000**
+Poi apri **http://127.0.0.1:5000**.
+
+Il database locale `radar_lavoro.db` viene creato sul tuo computer e non deve essere caricato nel repository. La API key Jooble va inserita dalle impostazioni dell'app, mai nel codice.
 
 ## Primo utilizzo
 
-1. Vai in **Impostazioni**
-2. Inserisci la tua città
-3. Incolla la tua API key Jooble (da **it.jooble.org/api/about** — dominio italiano, non jooble.org)
-4. Le parole chiave sono già precompilate in base al tuo profilo — modificale liberamente
-5. Salva, torna alla Dashboard, premi **"Cerca ora"**
+1. Vai in **Ricerca**.
+2. Inserisci la tua citta.
+3. Incolla la tua API key Jooble da **it.jooble.org/api/about**.
+4. Controlla le parole chiave gia precompilate e modificale se serve.
+5. Vai in **Filtri avanzati** per raffinare distanza, modalita, esperienza, contratto, orario, stipendio e priorita L.68/99.
+6. Torna alla **Dashboard** e premi **Cerca ora**.
 
 ## Come funziona
 
-- Ogni volta che premi "Cerca ora", lo strumento interroga Jooble con tutte le tue parole chiave nella tua città
-- Gli annunci già visti non vengono più mostrati come "nuovi" alle ricerche successive
-- Puoi segnare un singolo annuncio come visto, oppure usare "Segna tutti come visti" per svuotare la lista dei nuovi
-- Tutto resta salvato in un database locale (`radar_lavoro.db`) sul tuo computer
+- Ogni ricerca interroga Jooble con le parole chiave configurate e salva gli annunci pertinenti in SQLite.
+- Gli annunci vengono filtrati e ordinati con un punteggio di compatibilita 0-100.
+- Gli annunci gia presenti non vengono duplicati.
+- Puoi segnare un annuncio come visto o usare **Segna tutti come visti** per svuotare la sezione dei nuovi.
+- Le candidature e le note restano salvate solo nel database locale.
 
-## Cosa è stato tolto rispetto alle versioni precedenti
+## CRM candidature
 
-Su richiesta esplicita, questa versione torna volutamente essenziale:
-- Nessun account/login (l'avevamo aggiunto pensando a un uso multi-utente, non più necessario ora)
-- Nessun valutatore di bandi PDF (era una funzionalità separata, aggiungibile in futuro se serve)
-- Nessuna delle protezioni pensate per un lancio pubblico (CSRF, blocco brute-force, ecc.) — non servono per uno strumento che gira solo sul tuo computer, per te
+Ogni annuncio ha uno stato candidatura e un campo note personali direttamente nella dashboard.
 
-Se in futuro vorrai di nuovo condividerlo con altre persone o metterlo online,
-sappi che quelle funzionalità esistono già in una versione precedente e
-possono essere reintegrate.
+Stati disponibili:
+
+- **Nuovo**: offerta appena trovata.
+- **Visto**: offerta letta, senza decisione.
+- **Salvato**: offerta interessante da riprendere.
+- **CV preparato**: documenti pronti per candidarsi.
+- **Candidatura inviata**: candidatura mandata; l'app registra la data di invio.
+- **Colloquio**: colloquio fissato o in corso.
+- **Scartato**: offerta non adatta, senza eliminarla dal database.
+- **Assunto**: esito positivo.
+
+La dashboard mostra due sezioni principali:
+
+- **Nuovi**: annunci ancora da valutare.
+- **Candidature e offerte seguite**: annunci visti, salvati, candidati, in colloquio, scartati o conclusi.
+
+In alto trovi anche le statistiche rapide: nuovi, salvati, candidature inviate e colloqui.
+
+## Cosa resta volutamente fuori
+
+Questa versione rimane essenziale e personale:
+
+- nessun account o login;
+- nessuna gestione multiutente;
+- nessun deploy cloud;
+- nessuna API key nel codice;
+- nessun caricamento del database locale su GitHub.

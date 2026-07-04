@@ -15,11 +15,85 @@ CV_CATEGORIES = [
     "Comunicazione istituzionale",
     "Data Analyst",
     "Web Developer",
+    "Pubblica Amministrazione",
     "Generico",
 ]
 
 CV_FORMAT_OPTIONS = ["PDF", "DOCX", "TXT", "LINK", "Altro"]
 DEFAULT_CV_CATEGORY = "Generico"
+
+DEFAULT_CV_DOCUMENTS = [
+    {
+        "name": "CV Generico",
+        "description": "CV trasversale per comunicazione, digitale, IT junior e data analysis.",
+        "version": "1.0",
+        "category": "Generico",
+        "file_path": "Da impostare: percorso locale del CV generico PDF",
+        "file_format": "PDF",
+        "notes": "Basato sul CV generico caricato dall'utente. Non salvare il file nel repository.",
+        "is_default": 1,
+    },
+    {
+        "name": "CV Web Developer",
+        "description": "CV orientato a sviluppo web, tecnologie digitali, Python, Laravel, MySQL e Git/GitHub.",
+        "version": "1.0",
+        "category": "Web Developer",
+        "file_path": "Da impostare: percorso locale del CV Web Developer DOCX",
+        "file_format": "DOCX",
+        "notes": "Basato sul CV aggiornato caricato dall'utente. Non salvare il file nel repository.",
+        "is_default": 0,
+    },
+    {
+        "name": "CV Comunicazione",
+        "description": "CV da preparare per corporate communication, comunicazione digitale e ufficio stampa.",
+        "version": "bozza",
+        "category": "Corporate Communication",
+        "file_path": "Da creare",
+        "file_format": "Altro",
+        "notes": "Placeholder utile per CV Manager e Radar AI.",
+        "is_default": 0,
+    },
+    {
+        "name": "CV Digital Marketing",
+        "description": "CV da preparare per social media, digital marketing, content creation e analytics.",
+        "version": "bozza",
+        "category": "Digital Marketing",
+        "file_path": "Da creare",
+        "file_format": "Altro",
+        "notes": "Placeholder utile per offerte marketing e comunicazione digitale.",
+        "is_default": 0,
+    },
+    {
+        "name": "CV Giornalismo",
+        "description": "CV da preparare per redazione, giornalismo, contenuti editoriali e ufficio stampa.",
+        "version": "bozza",
+        "category": "Giornalismo",
+        "file_path": "Da creare",
+        "file_format": "Altro",
+        "notes": "Placeholder utile per offerte editoriali e redazionali.",
+        "is_default": 0,
+    },
+    {
+        "name": "CV Data Analyst",
+        "description": "CV da preparare per data analysis, report, SQL, analytics e dashboard.",
+        "version": "bozza",
+        "category": "Data Analyst",
+        "file_path": "Da creare",
+        "file_format": "Altro",
+        "notes": "Placeholder utile per opportunita data analyst junior.",
+        "is_default": 0,
+    },
+    {
+        "name": "CV Pubblica Amministrazione",
+        "description": "CV da preparare per concorsi, profili amministrativi e comunicazione istituzionale.",
+        "version": "bozza",
+        "category": "Pubblica Amministrazione",
+        "file_path": "Da creare",
+        "file_format": "Altro",
+        "notes": "Placeholder utile per lo sprint Concorsi pubblici.",
+        "is_default": 0,
+    },
+]
 
 CV_TABLE_SQL = """
 CREATE TABLE IF NOT EXISTS cv_documents (
@@ -90,10 +164,19 @@ CATEGORY_RULES = {
     "Comunicazione istituzionale": [
         "comunicazione istituzionale",
         "comunicazione pubblica",
-        "pubblica amministrazione",
         "ente pubblico",
         "ufficio stampa",
+    ],
+    "Pubblica Amministrazione": [
+        "pubblica amministrazione",
         "pa",
+        "concorso",
+        "concorsi",
+        "operatore amministrativo",
+        "ente pubblico",
+        "comune",
+        "provincia",
+        "regione",
     ],
     "Data Analyst": [
         "data analyst",
@@ -114,6 +197,7 @@ CATEGORY_RULES = {
         "public relation",
         "pr",
         "comunicazione interna",
+        "comunicazione digitale",
     ],
 }
 
@@ -165,6 +249,36 @@ def ensure_cv_schema(conn, ensure_column):
     conn.execute(CV_TABLE_SQL)
     for column_name, column_definition in CV_COLUMNS.items():
         ensure_column(conn, "cv_documents", column_name, column_definition)
+    seed_cv_documents(conn)
+
+
+def seed_cv_documents(conn):
+    """Inserisce metadati CV iniziali solo se la tabella e vuota."""
+    row = conn.execute("SELECT COUNT(*) AS total FROM cv_documents").fetchone()
+    if row and row["total"]:
+        return
+    now = _now()
+    for item in DEFAULT_CV_DOCUMENTS:
+        conn.execute(
+            """
+            INSERT INTO cv_documents
+                (name, description, version, category, file_path, file_format,
+                 checksum, created_at, updated_at, is_active, is_default, notes)
+            VALUES (?, ?, ?, ?, ?, ?, '', ?, ?, 1, ?, ?)
+            """,
+            (
+                item["name"],
+                item["description"],
+                item["version"],
+                _normalize_category(item["category"]),
+                item["file_path"],
+                _normalize_format(item["file_format"], item["file_path"]),
+                now,
+                now,
+                int(item.get("is_default", 0)),
+                item["notes"],
+            ),
+        )
 
 
 def cv_from_row(row):

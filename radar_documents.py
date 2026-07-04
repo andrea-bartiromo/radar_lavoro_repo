@@ -1,125 +1,73 @@
-"""Archivio documenti per Radar Lavoro.
+"""Archivio documenti locale per Radar Lavoro.
 
-Il modulo gestisce solo metadati e percorsi locali. I file restano sul PC
-dell'utente e non vengono salvati nel repository o nel database.
+Il modulo gestisce metadati e percorsi locali dei documenti utili alle
+candidature. I file restano sul computer dell'utente e non vengono salvati
+nel database.
 """
 
-from datetime import date, datetime
+import json
+from datetime import datetime
 from pathlib import Path
 
 
 DOCUMENT_CATEGORIES = [
-    "Curriculum",
+    "CV",
     "Lettera di presentazione",
     "Certificazione",
-    "Attestato",
-    "Titolo di studio",
+    "Categorie protette",
     "Portfolio",
-    "Concorsi pubblici",
-    "Documento personale",
+    "Documento amministrativo",
+    "Bando o concorso",
     "Altro",
 ]
 
-DOCUMENT_FORMAT_OPTIONS = ["PDF", "DOCX", "DOC", "PNG", "JPG", "TXT", "LINK", "Altro"]
-DOCUMENT_STATUS_OPTIONS = ["attivo", "da aggiornare", "scaduto", "archiviato"]
+DOCUMENT_STATUS_OPTIONS = {
+    "pronto": "Pronto",
+    "bozza": "Bozza",
+    "da_aggiornare": "Da aggiornare",
+    "archiviato": "Archiviato",
+}
+
+DOCUMENT_FORMAT_OPTIONS = ["PDF", "DOCX", "TXT", "PNG", "JPG", "ZIP", "LINK", "Altro"]
 DEFAULT_DOCUMENT_CATEGORY = "Altro"
-DEFAULT_DOCUMENT_STATUS = "attivo"
+DEFAULT_DOCUMENT_STATUS = "pronto"
 
 DOCUMENT_TABLE_SQL = """
 CREATE TABLE IF NOT EXISTS document_archive (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT DEFAULT '',
+    title TEXT DEFAULT '',
+    description TEXT DEFAULT '',
     category TEXT DEFAULT 'Altro',
-    document_type TEXT DEFAULT '',
     file_path TEXT DEFAULT '',
     file_format TEXT DEFAULT '',
-    issuer TEXT DEFAULT '',
-    version TEXT DEFAULT '',
-    tags TEXT DEFAULT '',
-    notes TEXT DEFAULT '',
-    expires_at TEXT DEFAULT '',
-    related_cv_id INTEGER,
-    related_job_id INTEGER,
-    is_favorite INTEGER DEFAULT 0,
+    checksum TEXT DEFAULT '',
+    tags TEXT DEFAULT '[]',
+    related_cv_id INTEGER DEFAULT 0,
+    status TEXT DEFAULT 'pronto',
     is_active INTEGER DEFAULT 1,
-    status TEXT DEFAULT 'attivo',
+    expires_at TEXT DEFAULT '',
     created_at TEXT DEFAULT '',
-    updated_at TEXT DEFAULT ''
+    updated_at TEXT DEFAULT '',
+    notes TEXT DEFAULT ''
 )
 """
 
 DOCUMENT_COLUMNS = {
-    "name": "TEXT DEFAULT ''",
+    "title": "TEXT DEFAULT ''",
+    "description": "TEXT DEFAULT ''",
     "category": "TEXT DEFAULT 'Altro'",
-    "document_type": "TEXT DEFAULT ''",
     "file_path": "TEXT DEFAULT ''",
     "file_format": "TEXT DEFAULT ''",
-    "issuer": "TEXT DEFAULT ''",
-    "version": "TEXT DEFAULT ''",
-    "tags": "TEXT DEFAULT ''",
-    "notes": "TEXT DEFAULT ''",
-    "expires_at": "TEXT DEFAULT ''",
-    "related_cv_id": "INTEGER",
-    "related_job_id": "INTEGER",
-    "is_favorite": "INTEGER DEFAULT 0",
+    "checksum": "TEXT DEFAULT ''",
+    "tags": "TEXT DEFAULT '[]'",
+    "related_cv_id": "INTEGER DEFAULT 0",
+    "status": "TEXT DEFAULT 'pronto'",
     "is_active": "INTEGER DEFAULT 1",
-    "status": "TEXT DEFAULT 'attivo'",
+    "expires_at": "TEXT DEFAULT ''",
     "created_at": "TEXT DEFAULT ''",
     "updated_at": "TEXT DEFAULT ''",
+    "notes": "TEXT DEFAULT ''",
 }
-
-DEFAULT_DOCUMENTS = [
-    {
-        "name": "CV Generico",
-        "category": "Curriculum",
-        "document_type": "Curriculum vitae",
-        "file_format": "PDF",
-        "file_path": "Da impostare: percorso locale del CV generico",
-        "tags": "cv, comunicazione, digitale, generico",
-        "notes": "Documento locale collegabile al CV Manager.",
-        "is_favorite": 1,
-    },
-    {
-        "name": "CV Web Developer",
-        "category": "Curriculum",
-        "document_type": "Curriculum vitae",
-        "file_format": "DOCX",
-        "file_path": "Da impostare: percorso locale del CV Web Developer",
-        "tags": "cv, web developer, python, laravel, mysql",
-        "notes": "Documento locale collegabile al CV Manager.",
-        "is_favorite": 0,
-    },
-    {
-        "name": "Lettera di presentazione generica",
-        "category": "Lettera di presentazione",
-        "document_type": "Lettera motivazionale",
-        "file_format": "Altro",
-        "file_path": "Da creare",
-        "tags": "lettera, candidatura, generica",
-        "notes": "Placeholder per future lettere personalizzate.",
-        "is_favorite": 0,
-    },
-    {
-        "name": "Cartella certificazioni",
-        "category": "Certificazione",
-        "document_type": "Raccolta certificazioni",
-        "file_format": "Altro",
-        "file_path": "Da impostare: cartella locale certificazioni",
-        "tags": "certificazioni, attestati, formazione",
-        "notes": "Raccoglie certificazioni e attestati utili alle candidature.",
-        "is_favorite": 0,
-    },
-    {
-        "name": "Documenti concorsi pubblici",
-        "category": "Concorsi pubblici",
-        "document_type": "Checklist documentale",
-        "file_format": "Altro",
-        "file_path": "Da impostare: cartella locale concorsi",
-        "tags": "concorsi, pa, documenti, checklist",
-        "notes": "Base per lo Sprint Concorsi pubblici.",
-        "is_favorite": 0,
-    },
-]
 
 
 def _now():
@@ -130,13 +78,20 @@ def _clean(value):
     return (value or "").strip()
 
 
-def _checked(form, field_name, default=False):
-    if hasattr(form, "getlist"):
-        return field_name in form
-    value = form.get(field_name, default)
-    if isinstance(value, bool):
-        return value
-    return str(value).lower() in {"1", "true", "on", "si", "yes"}
+def _load_json_list(value):
+    try:
+        parsed = json.loads(value or "[]")
+        return parsed if isinstance(parsed, list) else []
+    except json.JSONDecodeError:
+        return []
+
+
+def _dump_json_list(values):
+    return json.dumps(values or [], ensure_ascii=False)
+
+
+def _split_lines(value):
+    return [line.strip() for line in (value or "").splitlines() if line.strip()]
 
 
 def _normalize_category(category):
@@ -158,69 +113,38 @@ def _normalize_format(file_format, file_path):
         return "PDF"
     if suffix == "docx":
         return "DOCX"
-    if suffix == "doc":
-        return "DOC"
+    if suffix == "txt":
+        return "TXT"
     if suffix == "png":
         return "PNG"
     if suffix in {"jpg", "jpeg"}:
         return "JPG"
-    if suffix == "txt":
-        return "TXT"
+    if suffix == "zip":
+        return "ZIP"
     if _clean(file_path).startswith(("http://", "https://")):
         return "LINK"
     return cleaned or "Altro"
 
 
-def _normalize_date(value):
-    cleaned = _clean(value)
-    if not cleaned:
-        return ""
-    try:
-        return date.fromisoformat(cleaned).isoformat()
-    except ValueError:
-        return ""
+def _checked(form, field_name, default=False):
+    if hasattr(form, "getlist"):
+        return field_name in form
+    value = form.get(field_name, default)
+    if isinstance(value, bool):
+        return value
+    return str(value).lower() in {"1", "true", "on", "si", "yes"}
 
 
-def _tags_list(value):
-    return [tag.strip() for tag in (value or "").split(",") if tag.strip()]
+def _int_from_form(form, field_name):
+    value = _clean(form.get(field_name))
+    return int(value) if value.isdigit() else 0
 
 
 def ensure_document_schema(conn, ensure_column):
-    """Crea o aggiorna la tabella archivio documenti."""
+    """Crea e aggiorna la tabella documenti senza perdere dati esistenti."""
     conn.execute(DOCUMENT_TABLE_SQL)
     for column_name, column_definition in DOCUMENT_COLUMNS.items():
         ensure_column(conn, "document_archive", column_name, column_definition)
-    seed_default_documents(conn)
-
-
-def seed_default_documents(conn):
-    """Inserisce placeholder documentali solo se l'archivio e vuoto."""
-    row = conn.execute("SELECT COUNT(*) AS total FROM document_archive").fetchone()
-    if row and row["total"]:
-        return
-    now = _now()
-    for item in DEFAULT_DOCUMENTS:
-        conn.execute(
-            """
-            INSERT INTO document_archive
-                (name, category, document_type, file_path, file_format, issuer, version,
-                 tags, notes, expires_at, related_cv_id, related_job_id, is_favorite,
-                 is_active, status, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, '', '', ?, ?, '', NULL, NULL, ?, 1, 'attivo', ?, ?)
-            """,
-            (
-                item["name"],
-                _normalize_category(item["category"]),
-                item["document_type"],
-                item["file_path"],
-                _normalize_format(item["file_format"], item["file_path"]),
-                item["tags"],
-                item["notes"],
-                int(item.get("is_favorite", 0)),
-                now,
-                now,
-            ),
-        )
 
 
 def document_from_row(row):
@@ -229,96 +153,47 @@ def document_from_row(row):
     document = dict(row)
     document["category"] = _normalize_category(document.get("category"))
     document["status"] = _normalize_status(document.get("status"))
-    document["is_favorite"] = bool(document.get("is_favorite"))
+    document["status_label"] = DOCUMENT_STATUS_OPTIONS[document["status"]]
     document["is_active"] = bool(document.get("is_active"))
-    document["tags_list"] = _tags_list(document.get("tags"))
+    document["tags"] = _load_json_list(document.get("tags"))
     document["created_at_label"] = (document.get("created_at") or "").replace("T", " ")
     document["updated_at_label"] = (document.get("updated_at") or "").replace("T", " ")
-    document["is_expired"] = False
-    expires_at = document.get("expires_at") or ""
-    if expires_at:
-        try:
-            document["is_expired"] = date.fromisoformat(expires_at) < date.today()
-        except ValueError:
-            document["is_expired"] = False
     return document
 
 
-def load_documents(conn, document_id=None, filters=None):
-    """Carica un documento oppure l'elenco filtrato."""
+def load_documents(conn, document_id=None):
+    """Carica un documento specifico oppure tutto l'archivio ordinato."""
     if document_id is not None:
         row = conn.execute("SELECT * FROM document_archive WHERE id = ?", (document_id,)).fetchone()
         return document_from_row(row)
-
-    filters = filters or {}
-    clauses = []
-    params = []
-    category = _clean(filters.get("category"))
-    status = _clean(filters.get("status"))
-    query = _clean(filters.get("q")).lower()
-
-    if category in DOCUMENT_CATEGORIES:
-        clauses.append("category = ?")
-        params.append(category)
-    if status in DOCUMENT_STATUS_OPTIONS:
-        clauses.append("status = ?")
-        params.append(status)
-    if query:
-        clauses.append(
-            "(lower(name) LIKE ? OR lower(document_type) LIKE ? OR lower(tags) LIKE ? OR lower(notes) LIKE ?)"
-        )
-        like = f"%{query}%"
-        params.extend([like, like, like, like])
-
-    where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
     rows = conn.execute(
-        f"""
+        """
         SELECT *
           FROM document_archive
-          {where}
-         ORDER BY is_favorite DESC, is_active DESC, updated_at DESC, id DESC
-        """,
-        params,
+         ORDER BY is_active DESC, updated_at DESC, category ASC, id DESC
+        """
     ).fetchall()
     return [document_from_row(row) for row in rows]
 
 
-def document_stats(documents):
-    total = len(documents)
-    favorites = sum(1 for document in documents if document.get("is_favorite"))
-    expired = sum(1 for document in documents if document.get("is_expired"))
-    by_category = {}
-    for document in documents:
-        category = document.get("category") or DEFAULT_DOCUMENT_CATEGORY
-        by_category[category] = by_category.get(category, 0) + 1
-    return {
-        "total": total,
-        "favorites": favorites,
-        "expired": expired,
-        "active": sum(1 for document in documents if document.get("is_active")),
-        "by_category": by_category,
-    }
-
-
 def save_document(conn, form, document_id=None):
+    """Inserisce o aggiorna un documento salvando solo metadati e percorso."""
     now = _now()
-    name = _clean(form.get("name")) or "Documento senza nome"
     file_path = _clean(form.get("file_path"))
     values = {
-        "name": name,
+        "title": _clean(form.get("title")) or "Documento senza titolo",
+        "description": _clean(form.get("description")),
         "category": _normalize_category(form.get("category")),
-        "document_type": _clean(form.get("document_type")),
         "file_path": file_path,
         "file_format": _normalize_format(form.get("file_format"), file_path),
-        "issuer": _clean(form.get("issuer")),
-        "version": _clean(form.get("version")),
-        "tags": _clean(form.get("tags")),
-        "notes": _clean(form.get("notes")),
-        "expires_at": _normalize_date(form.get("expires_at")),
-        "is_favorite": 1 if _checked(form, "is_favorite") else 0,
-        "is_active": 1 if _checked(form, "is_active", True) else 0,
+        "checksum": _clean(form.get("checksum")),
+        "tags": _dump_json_list(_split_lines(form.get("tags", ""))),
+        "related_cv_id": _int_from_form(form, "related_cv_id"),
         "status": _normalize_status(form.get("status")),
+        "is_active": 1 if _checked(form, "is_active", True) else 0,
+        "expires_at": _clean(form.get("expires_at")),
         "updated_at": now,
+        "notes": _clean(form.get("notes")),
     }
 
     if document_id:
@@ -345,6 +220,7 @@ def save_document(conn, form, document_id=None):
 
 
 def delete_document(conn, document_id):
+    """Elimina solo il record dall'archivio, mai il file locale."""
     document = load_documents(conn, document_id)
     if document is None:
         return False
@@ -352,12 +228,36 @@ def delete_document(conn, document_id):
     return True
 
 
-def toggle_favorite_document(conn, document_id):
+def archive_document(conn, document_id):
+    """Sposta un documento nello stato archiviato senza eliminarlo."""
     document = load_documents(conn, document_id)
     if document is None:
         return False
     conn.execute(
-        "UPDATE document_archive SET is_favorite = ?, updated_at = ? WHERE id = ?",
-        (0 if document["is_favorite"] else 1, _now(), document_id),
+        """
+        UPDATE document_archive
+           SET status = 'archiviato', is_active = 0, updated_at = ?
+         WHERE id = ?
+        """,
+        (_now(), document_id),
     )
     return True
+
+
+def document_stats(documents):
+    stats = {
+        "totali": len(documents),
+        "attivi": 0,
+        "da_aggiornare": 0,
+        "categorie": 0,
+    }
+    categories = set()
+    for document in documents:
+        if document.get("is_active"):
+            stats["attivi"] += 1
+        if document.get("status") == "da_aggiornare":
+            stats["da_aggiornare"] += 1
+        if document.get("category"):
+            categories.add(document["category"])
+    stats["categorie"] = len(categories)
+    return stats

@@ -2,6 +2,24 @@
 
 Tutte le modifiche importanti al progetto verranno annotate qui.
 
+## Sprint 4 - Archivio Documenti
+
+### Aggiunto
+
+- Aggiunto `radar_documents.py` come modulo dedicato all'archivio documenti.
+- Creata la tabella `document_archive` per salvare metadati, percorso file, categoria, stato, tag, note e checksum opzionale.
+- Aggiunta la pagina `/documenti` con elenco documenti, form di aggiunta/modifica, archiviazione ed eliminazione.
+- Aggiunta la voce **Documenti** nella sidebar.
+- Collegato l'archivio ai CV tramite campo opzionale `related_cv_id`.
+- Aggiunta la migrazione `migrations/004_document_archive.sql`.
+- Creata la documentazione `docs/DOCUMENT_ARCHIVE.md`.
+
+### Modificato
+
+- Aggiornato `app.py` solo per inizializzare lo schema documenti e collegare le route.
+- Aggiornati `ROADMAP.md` e `ARCHITECTURE.md` con lo Sprint 4.
+- Aggiornato `static/style.css` con i componenti visuali dell'Archivio Documenti.
+
 ## Sprint - UX Profilo professionale
 
 ### Modificato

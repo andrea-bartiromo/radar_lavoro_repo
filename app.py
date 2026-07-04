@@ -33,6 +33,17 @@ from radar_cv import (
     save_cv,
     set_default_cv,
 )
+from radar_documents import (
+    DOCUMENT_CATEGORIES,
+    DOCUMENT_FORMAT_OPTIONS,
+    DOCUMENT_STATUS_OPTIONS,
+    archive_document,
+    delete_document,
+    document_stats,
+    ensure_document_schema,
+    load_documents,
+    save_document,
+)
 from radar_profile import (
     ensure_professional_profile_columns,
     join_lines,
@@ -219,6 +230,7 @@ def init_db():
     ]:
         ensure_column(conn, "jobs", column, definition)
     ensure_cv_schema(conn, ensure_column)
+    ensure_document_schema(conn, ensure_column)
     conn.execute(
         """
         UPDATE jobs
@@ -779,6 +791,62 @@ def imposta_cv_predefinito(cv_id):
     conn.close()
     flash("CV impostato come predefinito." if updated else "CV non trovato.", "successo" if updated else "errore")
     return redirect(url_for("cv_manager"))
+
+
+@app.route("/documenti", methods=["GET", "POST"])
+def archivio_documenti():
+    conn = get_db()
+    if request.method == "POST":
+        raw_document_id = request.form.get("document_id", "").strip()
+        document_id = int(raw_document_id) if raw_document_id.isdigit() else None
+        save_document(conn, request.form, document_id)
+        conn.commit()
+        conn.close()
+        flash("Documento aggiornato." if document_id else "Documento aggiunto all'archivio.", "successo")
+        return redirect(url_for("archivio_documenti"))
+
+    edit_id = request.args.get("edit", type=int)
+    edit_document = load_documents(conn, edit_id) if edit_id else None
+    if edit_id and edit_document is None:
+        conn.close()
+        flash("Documento non trovato.", "errore")
+        return redirect(url_for("archivio_documenti"))
+
+    documents = load_documents(conn)
+    cv_documents = load_cv(conn)
+    stats = document_stats(documents)
+    conn.close()
+    return render_template(
+        "documenti.html",
+        documents=documents,
+        edit_document=edit_document,
+        cv_documents=cv_documents,
+        stats=stats,
+        document_categories=DOCUMENT_CATEGORIES,
+        document_format_options=DOCUMENT_FORMAT_OPTIONS,
+        document_status_options=DOCUMENT_STATUS_OPTIONS,
+        join_lines=join_lines,
+    )
+
+
+@app.route("/documenti/<int:document_id>/elimina", methods=["POST"])
+def elimina_documento(document_id):
+    conn = get_db()
+    deleted = delete_document(conn, document_id)
+    conn.commit()
+    conn.close()
+    flash("Documento eliminato dall'archivio." if deleted else "Documento non trovato.", "successo" if deleted else "errore")
+    return redirect(url_for("archivio_documenti"))
+
+
+@app.route("/documenti/<int:document_id>/archivia", methods=["POST"])
+def archivia_documento(document_id):
+    conn = get_db()
+    archived = archive_document(conn, document_id)
+    conn.commit()
+    conn.close()
+    flash("Documento archiviato." if archived else "Documento non trovato.", "successo" if archived else "errore")
+    return redirect(url_for("archivio_documenti"))
 
 
 if __name__ == "__main__":

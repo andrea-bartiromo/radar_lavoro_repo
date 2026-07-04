@@ -2,6 +2,18 @@
 
 Tutte le modifiche importanti al progetto verranno annotate qui.
 
+## Sprint - UX Profilo professionale
+
+### Modificato
+
+- Ridisegnata la pagina `/profilo` come scheda personale moderna e leggibile.
+- Aggiunta hero card con identita, titolo professionale, stato, disponibilita, categorie protette e badge focus.
+- Aggiunte card quick stats per formazione, certificazioni, esperienze, competenze e ruoli obiettivo.
+- Organizzate le sezioni in accordion compatti con modalita visualizzazione di default.
+- Aggiunta modalita **Modifica Profilo** con pulsanti Salva e Annulla senza cambiare database o struttura dati.
+- Convertite competenze, certificazioni, ruoli e preferenze in badge leggibili.
+- Migliorata la resa responsive della pagina Profilo.
+
 ## Sprint 3 - CV Manager
 
 ### Aggiunto

@@ -1,115 +1,277 @@
 {% extends "base.html" %}
 {% block title %}Profilo professionale - Radar Lavoro{% endblock %}
 
+{% macro badge_list(items, empty_label="Non indicato") %}
+    {% if items %}
+        <div class="profile-badge-cloud">
+            {% for item in items %}
+                <span>{{ item }}</span>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p class="profile-empty">{{ empty_label }}</p>
+    {% endif %}
+{% endmacro %}
+
+{% macro timeline_list(items, empty_label="Non indicato") %}
+    {% if items %}
+        <ul class="profile-timeline">
+            {% for item in items %}
+                <li>{{ item }}</li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p class="profile-empty">{{ empty_label }}</p>
+    {% endif %}
+{% endmacro %}
+
+{% macro stat_card(icon, label, value, suffix="") %}
+    <article class="profile-stat-card">
+        <span>{{ icon }}</span>
+        <strong>{{ value }}</strong>
+        <small>{{ label }}{{ suffix }}</small>
+    </article>
+{% endmacro %}
+
+{% macro profile_section(key, icon, title, open=false) %}
+    <details class="profile-section-card" {% if open %}open{% endif %}>
+        <summary>
+            <span class="section-icon">{{ icon }}</span>
+            <strong>{{ title }}</strong>
+            <span class="section-toggle">Apri</span>
+        </summary>
+        <div class="profile-section-body">
+            {{ caller() }}
+        </div>
+    </details>
+{% endmacro %}
+
 {% block content %}
-<section class="hero hero-v2">
-    <div>
-        <span class="eyebrow">Scheda personale</span>
-        <h1>Profilo professionale</h1>
-        <p class="hero-sub">La base dati personale per ranking, CV Manager, documenti, concorsi pubblici, Radar AI e apprendimento.</p>
-    </div>
-</section>
+{% set education_count = professional_profile.education_items|length %}
+{% set certification_count = professional_profile.certifications|length %}
+{% set experience_count = professional_profile.experiences|length %}
+{% set skills_count = professional_profile.skills|length + professional_profile.technical_skills|length %}
+{% set roles_count = professional_profile.target_roles|length %}
 
-<form class="form-card form-card-wide" method="post">
-    <section class="filter-section">
-        <h2>Identita professionale</h2>
-        <div class="filter-two-cols">
-            <div class="field">
-                <label for="professional_full_name">Nome</label>
-                <input id="professional_full_name" type="text" name="professional_full_name" value="{{ professional_profile.professional_full_name }}">
+<form id="profileForm" class="profile-page" method="post">
+    <section class="profile-hero-card">
+        <div class="profile-hero-main">
+            <span class="eyebrow">Scheda personale</span>
+            <h1>{{ professional_profile.professional_full_name }}</h1>
+            <p class="profile-headline">{{ professional_profile.professional_headline }}</p>
+
+            <div class="profile-hero-meta">
+                <span>Universita degli Studi di Salerno</span>
+                <span>Studente Magistrale</span>
+                <span>Categorie protette L.68/99</span>
             </div>
-            <div class="field">
-                <label for="professional_headline">Titolo professionale</label>
-                <textarea id="professional_headline" name="professional_headline" rows="4">{{ professional_profile.professional_headline }}</textarea>
+
+            <p class="profile-availability">{{ professional_profile.availability }}</p>
+
+            <div class="profile-focus-tags">
+                <span>Digital Marketing</span>
+                <span>Corporate Communication</span>
+                <span>Content Creation</span>
+                <span>Giornalismo</span>
+                <span>Web Development</span>
             </div>
         </div>
-        <div class="field">
-            <label for="availability">Disponibilita e posizionamento</label>
-            <textarea id="availability" name="availability" rows="4">{{ professional_profile.availability }}</textarea>
+
+        <div class="profile-hero-side">
+            <div class="profile-avatar-large">AB</div>
+            <span class="profile-status-chip">Profilo attivo</span>
+            {% if professional_profile.profile_updated_at %}
+                <small>Ultimo aggiornamento {{ professional_profile.profile_updated_at }}</small>
+            {% endif %}
         </div>
     </section>
 
-    <section class="filter-section">
-        <h2>Formazione</h2>
-        <div class="field">
-            <label for="education_items">Percorso formativo</label>
-            <textarea id="education_items" name="education_items" rows="6">{{ join_lines(professional_profile.education_items) }}</textarea>
-            <p class="hint">Una voce per riga. Questi dati saranno usati da CV Manager e Radar AI.</p>
+    <div class="profile-mode-bar">
+        <div>
+            <span class="section-kicker">Panoramica</span>
+            <h2>Profilo professionale</h2>
         </div>
-    </section>
-
-    <section class="filter-section">
-        <h2>Esperienze</h2>
-        <div class="field">
-            <label for="experiences">Esperienze professionali</label>
-            <textarea id="experiences" name="experiences" rows="6">{{ join_lines(professional_profile.experiences) }}</textarea>
+        <div class="profile-mode-actions">
+            <button id="editProfileBtn" class="btn-primary profile-view-only" type="button">Modifica Profilo</button>
+            <button class="btn-primary profile-edit-only" type="submit">Salva</button>
+            <button id="cancelProfileBtn" class="btn-ghost profile-edit-only" type="button">Annulla</button>
         </div>
-    </section>
-
-    <section class="filter-section">
-        <h2>Certificazioni</h2>
-        <div class="field">
-            <label for="certifications">Certificazioni e attestati</label>
-            <textarea id="certifications" name="certifications" rows="6">{{ join_lines(professional_profile.certifications) }}</textarea>
-        </div>
-    </section>
-
-    <section class="filter-section">
-        <h2>Competenze</h2>
-        <div class="field">
-            <label for="skills">Competenze comunicazione, marketing e contenuti</label>
-            <textarea id="skills" name="skills" rows="10">{{ join_lines(professional_profile.skills) }}</textarea>
-        </div>
-    </section>
-
-    <section class="filter-section">
-        <h2>Competenze tecniche</h2>
-        <div class="field">
-            <label for="technical_skills">Stack tecnico e strumenti</label>
-            <textarea id="technical_skills" name="technical_skills" rows="10">{{ join_lines(professional_profile.technical_skills) }}</textarea>
-        </div>
-    </section>
-
-    <section class="filter-section">
-        <h2>Ruoli obiettivo</h2>
-        <div class="field">
-            <label for="target_roles">Ruoli da prioritizzare nel radar</label>
-            <textarea id="target_roles" name="target_roles" rows="12">{{ join_lines(professional_profile.target_roles) }}</textarea>
-            <p class="hint">Queste voci aiutano ranking, suggerimenti CV e futuri alert intelligenti.</p>
-        </div>
-    </section>
-
-    <section class="filter-section">
-        <h2>Preferenze territoriali</h2>
-        <div class="field">
-            <label for="territorial_preferences">Territori e modalita preferite</label>
-            <textarea id="territorial_preferences" name="territorial_preferences" rows="7">{{ join_lines(professional_profile.territorial_preferences) }}</textarea>
-        </div>
-    </section>
-
-    <section class="filter-section">
-        <h2>Categorie protette</h2>
-        <div class="field">
-            <label for="protected_categories">Dati utili per opportunita L.68/99</label>
-            <textarea id="protected_categories" name="protected_categories" rows="4">{{ join_lines(professional_profile.protected_categories) }}</textarea>
-            <p class="hint">Informazione locale: non caricare documenti sensibili nel repository.</p>
-        </div>
-    </section>
-
-    <section class="filter-section">
-        <h2>Note interne</h2>
-        <div class="field">
-            <label for="profile_notes">Note operative</label>
-            <textarea id="profile_notes" name="profile_notes" rows="6">{{ professional_profile.profile_notes }}</textarea>
-        </div>
-        {% if professional_profile.profile_updated_at %}
-            <p class="hint">Ultimo aggiornamento: {{ professional_profile.profile_updated_at }}</p>
-        {% endif %}
-    </section>
-
-    <div class="form-actions">
-        <button class="btn-primary" type="submit">Salva profilo</button>
-        <a class="btn-ghost" href="{{ url_for('dashboard') }}">Torna alla Dashboard</a>
     </div>
+
+    <section class="profile-stats-grid">
+        {{ stat_card("EDU", "Formazione", education_count) }}
+        {{ stat_card("CERT", "Certificazioni", certification_count) }}
+        {{ stat_card("EXP", "Esperienze", experience_count) }}
+        {{ stat_card("SKILL", "Competenze", skills_count) }}
+        {{ stat_card("ROLE", "Ruoli obiettivo", roles_count) }}
+    </section>
+
+    <section class="profile-sections-grid">
+        {% call profile_section("identity", "ID", "Identita professionale", true) %}
+            <div class="profile-view-panel">
+                <dl class="profile-definition-grid">
+                    <div>
+                        <dt>Nome</dt>
+                        <dd>{{ professional_profile.professional_full_name }}</dd>
+                    </div>
+                    <div>
+                        <dt>Titolo</dt>
+                        <dd>{{ professional_profile.professional_headline }}</dd>
+                    </div>
+                    <div>
+                        <dt>Disponibilita</dt>
+                        <dd>{{ professional_profile.availability }}</dd>
+                    </div>
+                </dl>
+            </div>
+            <div class="profile-edit-panel">
+                <div class="filter-two-cols">
+                    <div class="field">
+                        <label for="professional_full_name">Nome</label>
+                        <input id="professional_full_name" type="text" name="professional_full_name" value="{{ professional_profile.professional_full_name }}">
+                    </div>
+                    <div class="field">
+                        <label for="professional_headline">Titolo professionale</label>
+                        <textarea id="professional_headline" name="professional_headline" rows="4">{{ professional_profile.professional_headline }}</textarea>
+                    </div>
+                </div>
+                <div class="field">
+                    <label for="availability">Disponibilita e posizionamento</label>
+                    <textarea id="availability" name="availability" rows="4">{{ professional_profile.availability }}</textarea>
+                </div>
+            </div>
+        {% endcall %}
+
+        {% call profile_section("education", "EDU", "Formazione") %}
+            <div class="profile-view-panel">
+                {{ timeline_list(professional_profile.education_items) }}
+            </div>
+            <div class="profile-edit-panel">
+                <div class="field">
+                    <label for="education_items">Percorso formativo</label>
+                    <textarea id="education_items" name="education_items" rows="6">{{ join_lines(professional_profile.education_items) }}</textarea>
+                </div>
+            </div>
+        {% endcall %}
+
+        {% call profile_section("experiences", "EXP", "Esperienze") %}
+            <div class="profile-view-panel">
+                {{ timeline_list(professional_profile.experiences) }}
+            </div>
+            <div class="profile-edit-panel">
+                <div class="field">
+                    <label for="experiences">Esperienze professionali</label>
+                    <textarea id="experiences" name="experiences" rows="6">{{ join_lines(professional_profile.experiences) }}</textarea>
+                </div>
+            </div>
+        {% endcall %}
+
+        {% call profile_section("certifications", "CERT", "Certificazioni") %}
+            <div class="profile-view-panel">
+                {{ badge_list(professional_profile.certifications) }}
+            </div>
+            <div class="profile-edit-panel">
+                <div class="field">
+                    <label for="certifications">Certificazioni e attestati</label>
+                    <textarea id="certifications" name="certifications" rows="6">{{ join_lines(professional_profile.certifications) }}</textarea>
+                </div>
+            </div>
+        {% endcall %}
+
+        {% call profile_section("skills", "SKILL", "Competenze", true) %}
+            <div class="profile-view-panel">
+                {{ badge_list(professional_profile.skills) }}
+            </div>
+            <div class="profile-edit-panel">
+                <div class="field">
+                    <label for="skills">Competenze comunicazione, marketing e contenuti</label>
+                    <textarea id="skills" name="skills" rows="10">{{ join_lines(professional_profile.skills) }}</textarea>
+                </div>
+            </div>
+        {% endcall %}
+
+        {% call profile_section("technical", "TECH", "Competenze tecniche") %}
+            <div class="profile-view-panel">
+                {{ badge_list(professional_profile.technical_skills) }}
+            </div>
+            <div class="profile-edit-panel">
+                <div class="field">
+                    <label for="technical_skills">Stack tecnico e strumenti</label>
+                    <textarea id="technical_skills" name="technical_skills" rows="10">{{ join_lines(professional_profile.technical_skills) }}</textarea>
+                </div>
+            </div>
+        {% endcall %}
+
+        {% call profile_section("roles", "ROLE", "Ruoli obiettivo", true) %}
+            <div class="profile-view-panel">
+                {{ badge_list(professional_profile.target_roles) }}
+            </div>
+            <div class="profile-edit-panel">
+                <div class="field">
+                    <label for="target_roles">Ruoli da prioritizzare nel radar</label>
+                    <textarea id="target_roles" name="target_roles" rows="12">{{ join_lines(professional_profile.target_roles) }}</textarea>
+                </div>
+            </div>
+        {% endcall %}
+
+        {% call profile_section("territory", "GEO", "Preferenze territoriali") %}
+            <div class="profile-view-panel">
+                {{ badge_list(professional_profile.territorial_preferences) }}
+            </div>
+            <div class="profile-edit-panel">
+                <div class="field">
+                    <label for="territorial_preferences">Territori e modalita preferite</label>
+                    <textarea id="territorial_preferences" name="territorial_preferences" rows="7">{{ join_lines(professional_profile.territorial_preferences) }}</textarea>
+                </div>
+            </div>
+        {% endcall %}
+
+        {% call profile_section("protected", "L68", "Categorie protette") %}
+            <div class="profile-view-panel">
+                {{ badge_list(professional_profile.protected_categories) }}
+            </div>
+            <div class="profile-edit-panel">
+                <div class="field">
+                    <label for="protected_categories">Dati utili per opportunita L.68/99</label>
+                    <textarea id="protected_categories" name="protected_categories" rows="4">{{ join_lines(professional_profile.protected_categories) }}</textarea>
+                </div>
+            </div>
+        {% endcall %}
+
+        {% call profile_section("notes", "NOTE", "Note") %}
+            <div class="profile-view-panel">
+                {% if professional_profile.profile_notes %}
+                    <p class="profile-note-text">{{ professional_profile.profile_notes }}</p>
+                {% else %}
+                    <p class="profile-empty">Nessuna nota interna.</p>
+                {% endif %}
+            </div>
+            <div class="profile-edit-panel">
+                <div class="field">
+                    <label for="profile_notes">Note operative</label>
+                    <textarea id="profile_notes" name="profile_notes" rows="6">{{ professional_profile.profile_notes }}</textarea>
+                </div>
+            </div>
+        {% endcall %}
+    </section>
 </form>
+
+<script>
+(() => {
+    const page = document.getElementById("profileForm");
+    const editButton = document.getElementById("editProfileBtn");
+    const cancelButton = document.getElementById("cancelProfileBtn");
+
+    if (!page || !editButton || !cancelButton) return;
+
+    editButton.addEventListener("click", () => {
+        page.classList.add("is-editing");
+    });
+
+    cancelButton.addEventListener("click", () => {
+        page.reset();
+        page.classList.remove("is-editing");
+    });
+})();
+</script>
 {% endblock %}

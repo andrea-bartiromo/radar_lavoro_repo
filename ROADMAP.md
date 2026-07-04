@@ -34,6 +34,7 @@ Obiettivo: usare meglio il profilo di Andrea per ordinare le offerte.
 
 - [x] Creare pagina Profilo.
 - [x] Salvare competenze, titolo di studio, preferenze territoriali e disponibilita.
+- [x] Migliorare la UX del Profilo con scheda personale, accordion, badge e modalita visualizzazione/modifica.
 - [ ] Personalizzare le parole chiave partendo dal profilo.
 - [x] Separare preferenze forti da preferenze leggere.
 - [ ] Migliorare il punteggio di compatibilita con spiegazioni piu chiare.

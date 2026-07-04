@@ -2,6 +2,25 @@
 
 Tutte le modifiche importanti al progetto verranno annotate qui.
 
+## Sprint 3 - CV Manager
+
+### Aggiunto
+
+- Aggiunto `radar_cv.py` come modulo dedicato alla gestione dei curriculum.
+- Creata la tabella `cv_documents` per salvare metadati, categoria, percorso file, formato, stato, note e checksum opzionale.
+- Aggiunta la pagina `/cv` con elenco CV, form di aggiunta/modifica, eliminazione e impostazione del CV predefinito.
+- Aggiunta la voce **CV Manager** nella sidebar.
+- Preparata l'area **Suggerito automaticamente** per il futuro Radar AI.
+- Implementata `find_best_cv()` con regole semplici basate su categoria e parole chiave.
+- Aggiunta la migrazione `migrations/003_cv_manager.sql`.
+- Creata la documentazione `docs/CV_MANAGER.md`.
+
+### Modificato
+
+- Aggiornato `app.py` solo per inizializzare lo schema CV e collegare le route.
+- Aggiornati `ROADMAP.md` e `ARCHITECTURE.md` con lo Sprint 3.
+- Aggiornato `static/style.css` con i componenti visuali del CV Manager.
+
 ## Sprint - Profilo professionale completo
 
 ### Aggiunto

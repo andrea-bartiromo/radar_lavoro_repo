@@ -31,6 +31,7 @@ La versione corrente include:
 - gestione offerte nuove/visti;
 - CRM candidature con stato candidatura, note, date e offerte seguite;
 - profilo professionale strutturato con formazione, esperienze, certificazioni, competenze, competenze tecniche, ruoli obiettivo, preferenze territoriali e categorie protette.
+- CV Manager locale con metadati dei curriculum, categorie, stato attivo, CV predefinito e suggerimento iniziale per categoria.
 
 ## Struttura attuale del repository
 
@@ -38,6 +39,7 @@ La versione corrente include:
 radar_lavoro_repo/
 |-- app.py
 |-- radar_candidates.py
+|-- radar_cv.py
 |-- radar_profile.py
 |-- requirements.txt
 |-- README.md
@@ -46,12 +48,15 @@ radar_lavoro_repo/
 |-- ARCHITECTURE.md
 |-- docs/
 |   |-- SISTEMA_CANDIDATURE.md
-|   `-- PROFILO_PROFESSIONALE.md
+|   |-- PROFILO_PROFESSIONALE.md
+|   `-- CV_MANAGER.md
 |-- migrations/
 |   |-- 001_candidature.sql
-|   `-- 002_profilo_professionale.sql
+|   |-- 002_profilo_professionale.sql
+|   `-- 003_cv_manager.sql
 |-- templates/
 |   |-- base.html
+|   |-- cv.html
 |   |-- dashboard.html
 |   |-- filtri.html
 |   |-- impostazioni.html
@@ -136,12 +141,26 @@ Il profilo e strutturato in:
 - categorie protette;
 - note interne.
 
+### radar_cv.py
+
+Responsabilita:
+
+- schema e compatibilita della tabella `cv_documents`;
+- categorie CV iniziali;
+- lettura, salvataggio, eliminazione e scelta del CV predefinito;
+- normalizzazione di formato, categoria e stato attivo;
+- suggerimento iniziale del CV migliore tramite `find_best_cv()`.
+
+Il modulo salva solo metadati e percorsi locali. I file CV non vengono copiati,
+caricati o salvati nel database.
+
 ### templates/
 
 Responsabilita:
 
 - `base.html`: layout, navigazione, sidebar;
 - `dashboard.html`: elenco offerte, punteggi, CRM candidature;
+- `cv.html`: archivio CV, form metadati, stato attivo, predefinito e suggerimento automatico;
 - `impostazioni.html`: configurazione ricerca;
 - `filtri.html`: filtri avanzati e priorita;
 - `profilo.html`: scheda professionale strutturata.
@@ -153,7 +172,7 @@ Responsabilita:
 - design system visivo;
 - layout dashboard;
 - card offerte;
-- form impostazioni, filtri e profilo;
+- form impostazioni, filtri, profilo e CV Manager;
 - componenti CRM candidature.
 
 ## Flusso dati attuale
@@ -168,6 +187,7 @@ Responsabilita:
 8. La dashboard mostra nuovi annunci e candidature/offerte seguite.
 9. L'utente aggiorna stato candidatura e note.
 10. Il profilo professionale alimenta parole chiave e ranking.
+11. Il CV Manager mantiene i curriculum locali e prepara il suggerimento del CV piu adatto.
 
 ## Convenzioni codice
 
@@ -211,9 +231,11 @@ Responsabilita:
 
 ### Fase 3 - CV e documenti
 
-- Archivio CV.
+- Archivio CV con metadati e percorsi locali.
+- Categorie CV e stato attivo/predefinito.
+- Prima funzione di suggerimento CV per categoria.
 - Documenti personali locali.
-- Suggerimento CV per offerta.
+- Suggerimento CV per offerta da integrare nella dashboard.
 - Checklist candidatura.
 
 ### Fase 4 - Concorsi pubblici

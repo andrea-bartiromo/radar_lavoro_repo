@@ -2,6 +2,15 @@
 
 Tutte le modifiche importanti al progetto verranno annotate qui.
 
+## Sprint - Aggiornamento dati profilo e CV
+
+### Modificato
+
+- Aggiornati i dati professionali predefiniti del Profilo con formazione, esperienze, certificazioni, competenze e ruoli obiettivo ricavati dai CV caricati.
+- Aggiornato il CV Manager con metadati iniziali e placeholder per CV Generico, Web Developer, Comunicazione, Digital Marketing, Giornalismo, Data Analyst e Pubblica Amministrazione.
+- Aggiunta la categoria CV **Pubblica Amministrazione**, utile per il futuro Sprint Concorsi pubblici.
+- Confermata la separazione tra codice applicativo e file personali: il repository conserva solo metadati e placeholder.
+
 ## Sprint - UX Profilo professionale
 
 ### Modificato

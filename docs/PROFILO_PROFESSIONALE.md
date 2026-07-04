@@ -1,74 +1,98 @@
 # Profilo professionale
 
-Questo sprint introduce il profilo professionale unico di Andrea dentro Radar Lavoro.
+Il Profilo professionale e la scheda personale strutturata di Andrea dentro Radar Lavoro.
+
+Non e un CV caricato nel repository e non contiene documenti personali: salva solo dati testuali locali nel database SQLite.
 
 ## Obiettivo
 
-Il profilo serve a trasformare Radar Lavoro da semplice motore di ricerca a sistema personale capace di capire meglio:
+Il profilo serve come base comune per:
 
-- competenze reali;
+- ranking offerte;
+- CV Manager;
+- archivio documenti;
+- concorsi pubblici;
+- Radar AI;
+- motore di apprendimento.
+
+## Sezioni della scheda
+
+La pagina `/profilo` e organizzata in sezioni distinte:
+
+1. Identita professionale
+2. Formazione
+3. Esperienze
+4. Certificazioni
+5. Competenze
+6. Competenze tecniche
+7. Ruoli obiettivo
+8. Preferenze territoriali
+9. Categorie protette
+10. Note interne
+
+Ogni lista viene salvata come JSON nella tabella `profile`, partendo da textarea con una voce per riga.
+
+## Dati iniziali
+
+Il seed iniziale include:
+
+- titolo professionale completo;
+- percorso formativo;
+- esperienze giornalismo/social media;
+- certificazioni;
+- competenze comunicazione/marketing/contenuti;
+- competenze tecniche;
 - ruoli obiettivo;
 - preferenze territoriali;
-- disponibilita;
-- categorie protette L.68/99;
-- differenza tra preferenze forti e preferenze leggere.
-
-## Scelte architetturali
-
-La logica e stata inserita nel modulo `radar_profile.py`, seguendo il modello gia usato da `radar_candidates.py`.
-
-Il modulo contiene:
-
-- valori iniziali del profilo;
-- colonne database necessarie;
-- funzioni di migrazione tramite `ensure_column`;
-- caricamento e salvataggio del profilo;
-- normalizzazione delle liste scritte una voce per riga;
-- funzione `profile_keywords`, utile per ranking, CV Manager e Radar AI.
+- informazioni L.68/99.
 
 ## Database
 
-I dati sono salvati nella tabella `profile`, perche l'app e ancora personale e monoutente.
+I dati restano nella tabella `profile`, per mantenere l'app monoutente e compatibile con il database esistente.
 
-Campi aggiunti:
+Campi principali:
 
 - `professional_full_name`
 - `professional_headline`
+- `education_items`
+- `experiences`
+- `certifications`
+- `skills`
+- `technical_skills`
+- `target_roles`
+- `territorial_preferences`
+- `protected_categories`
+- `availability`
+- `profile_notes`
+- `profile_updated_at`
+- `profile_schema_version`
+
+Campi legacy mantenuti per compatibilita:
+
 - `education`
 - `location_preference`
-- `availability`
 - `protected_category_notes`
 - `strong_preferences`
 - `soft_preferences`
-- `skills`
-- `target_roles`
-- `profile_notes`
-- `profile_updated_at`
 
-La migrazione SQL e disponibile in `migrations/002_profilo_professionale.sql`.
+## Compatibilita
 
-## UI
+Le nuove colonne vengono aggiunte con `ensure_column`.
 
-La pagina `templates/profilo.html` e pensata come scheda modificabile, non come semplice testo statico.
+La funzione `seed_professional_profile()` arricchisce i dati esistenti senza cancellare modifiche manuali gia presenti. Il campo `profile_schema_version` evita di riapplicare lo stesso arricchimento a ogni avvio. I campi legacy vengono mantenuti sincronizzati con le nuove liste dove serve.
 
-Sezioni previste:
+## Uso futuro
 
-1. identita professionale;
-2. preferenze e disponibilita;
-3. preferenze forti e leggere;
-4. competenze e ruoli obiettivo;
-5. note interne.
+`profile_keywords()` restituisce parole chiave derivate da:
 
-## Uso nei prossimi sprint
+- ruoli obiettivo;
+- competenze;
+- competenze tecniche;
+- certificazioni;
+- formazione;
+- esperienze;
+- preferenze territoriali;
+- categorie protette;
+- preferenze forti e leggere.
 
-Il profilo professionale sara usato da:
-
-- **CV Manager**: scelta del CV piu adatto e suggerimenti mirati;
-- **Archivio documenti**: checklist candidatura;
-- **Concorsi pubblici**: priorita PA, L.68/99 e profili amministrativi;
-- **Radar AI**: spiegazione del match e requisiti mancanti;
-- **Motore di apprendimento**: aggiustamento delle preferenze in base alle azioni dell'utente.
-
-## Regola di prodotto
-
-Le preferenze forti devono incidere piu delle preferenze leggere. Una preferenza forte puo diventare filtro o forte bonus; una preferenza leggera deve restare un aiuto al ranking, non un blocco automatico.
+Questa funzione e il punto di aggancio per ranking, CV Manager e Radar AI.

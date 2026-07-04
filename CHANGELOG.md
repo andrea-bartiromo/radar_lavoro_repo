@@ -2,6 +2,24 @@
 
 Tutte le modifiche importanti al progetto verranno annotate qui.
 
+## Sprint - Profilo professionale completo
+
+### Aggiunto
+
+- Trasformata la pagina Profilo in una scheda personale strutturata.
+- Aggiunte sezioni dedicate a identita professionale, formazione, esperienze, certificazioni, competenze, competenze tecniche, ruoli obiettivo, preferenze territoriali, categorie protette e note interne.
+- Esteso `radar_profile.py` con nuovi campi modulari e funzioni helper per liste testuali.
+- Aggiunte colonne compatibili con il database esistente tramite `ensure_column`.
+- Arricchito il seed iniziale con dati professionali completi di Andrea.
+- Aggiunto `profile_schema_version` per applicare l'arricchimento iniziale senza ripeterlo a ogni avvio.
+
+### Modificato
+
+- Aggiornata la migrazione `migrations/002_profilo_professionale.sql`.
+- Aggiornata la documentazione `docs/PROFILO_PROFESSIONALE.md`.
+- Aggiornati `ROADMAP.md` e `ARCHITECTURE.md` per riflettere il profilo strutturato.
+- Estesa `profile_keywords()` per i futuri sprint CV Manager, documenti, concorsi pubblici, Radar AI e motore di apprendimento.
+
 ## Sprint - Profilo professionale
 
 ### Aggiunto

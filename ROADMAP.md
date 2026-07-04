@@ -13,6 +13,8 @@ Radar Lavoro e una web app locale in Flask pensata per un solo utente. La versio
 - filtrare per distanza, modalita di lavoro, esperienza, contratto, orario, stipendio e categorie protette;
 - ordinare le offerte con un punteggio di compatibilita personalizzato;
 - dare priorita a offerte remote, junior, coerenti con comunicazione/digital marketing e L.68/99.
+- gestire candidature con stati, note, date e offerte seguite;
+- salvare un profilo professionale strutturato con formazione, esperienze, certificazioni, competenze, ruoli obiettivo e preferenze territoriali.
 
 ## Versione 1.1 - Stabilizzazione personale
 
@@ -29,10 +31,10 @@ Obiettivo: rendere l'app comoda e affidabile per l'uso quotidiano sul PC.
 
 Obiettivo: usare meglio il profilo di Andrea per ordinare le offerte.
 
-- [ ] Creare pagina Profilo.
-- [ ] Salvare competenze, titolo di studio, preferenze territoriali e disponibilita.
+- [x] Creare pagina Profilo.
+- [x] Salvare competenze, titolo di studio, preferenze territoriali e disponibilita.
 - [ ] Personalizzare le parole chiave partendo dal profilo.
-- [ ] Separare preferenze forti da preferenze leggere.
+- [x] Separare preferenze forti da preferenze leggere.
 - [ ] Migliorare il punteggio di compatibilita con spiegazioni piu chiare.
 
 ## Versione 1.3 - Categorie protette e concorsi

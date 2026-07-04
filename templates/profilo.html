@@ -1,87 +1,106 @@
 {% extends "base.html" %}
-{% block title %}Profilo professionale · Radar Lavoro{% endblock %}
+{% block title %}Profilo professionale - Radar Lavoro{% endblock %}
 
 {% block content %}
 <section class="hero hero-v2">
     <div>
-        <span class="eyebrow">Sprint Profilo professionale</span>
+        <span class="eyebrow">Scheda personale</span>
         <h1>Profilo professionale</h1>
-        <p class="hero-sub">Qui Radar Lavoro salva competenze, preferenze e obiettivi da usare nei prossimi sprint per ranking, CV e Radar AI.</p>
+        <p class="hero-sub">La base dati personale per ranking, CV Manager, documenti, concorsi pubblici, Radar AI e apprendimento.</p>
     </div>
 </section>
 
 <form class="form-card form-card-wide" method="post">
     <section class="filter-section">
-        <h2>Identità professionale</h2>
+        <h2>Identita professionale</h2>
         <div class="filter-two-cols">
             <div class="field">
                 <label for="professional_full_name">Nome</label>
                 <input id="professional_full_name" type="text" name="professional_full_name" value="{{ professional_profile.professional_full_name }}">
             </div>
             <div class="field">
-                <label for="professional_headline">Titolo sintetico</label>
-                <input id="professional_headline" type="text" name="professional_headline" value="{{ professional_profile.professional_headline }}">
+                <label for="professional_headline">Titolo professionale</label>
+                <textarea id="professional_headline" name="professional_headline" rows="4">{{ professional_profile.professional_headline }}</textarea>
             </div>
         </div>
         <div class="field">
-            <label for="education">Formazione</label>
-            <textarea id="education" name="education" rows="3">{{ professional_profile.education }}</textarea>
+            <label for="availability">Disponibilita e posizionamento</label>
+            <textarea id="availability" name="availability" rows="4">{{ professional_profile.availability }}</textarea>
         </div>
     </section>
 
     <section class="filter-section">
-        <h2>Preferenze e disponibilità</h2>
-        <div class="filter-two-cols">
-            <div class="field">
-                <label for="location_preference">Preferenza territoriale</label>
-                <textarea id="location_preference" name="location_preference" rows="4">{{ professional_profile.location_preference }}</textarea>
-            </div>
-            <div class="field">
-                <label for="availability">Disponibilità</label>
-                <textarea id="availability" name="availability" rows="4">{{ professional_profile.availability }}</textarea>
-            </div>
-        </div>
+        <h2>Formazione</h2>
         <div class="field">
-            <label for="protected_category_notes">Categorie protette / note utili</label>
-            <textarea id="protected_category_notes" name="protected_category_notes" rows="3">{{ professional_profile.protected_category_notes }}</textarea>
+            <label for="education_items">Percorso formativo</label>
+            <textarea id="education_items" name="education_items" rows="6">{{ join_lines(professional_profile.education_items) }}</textarea>
+            <p class="hint">Una voce per riga. Questi dati saranno usati da CV Manager e Radar AI.</p>
         </div>
     </section>
 
     <section class="filter-section">
-        <h2>Preferenze forti e leggere</h2>
-        <div class="filter-two-cols">
-            <div class="field">
-                <label for="strong_preferences">Preferenze forti</label>
-                <textarea id="strong_preferences" name="strong_preferences" rows="8">{{ professional_profile.strong_preferences | join('\n') }}</textarea>
-                <p class="hint">Una voce per riga. Queste preferenze peseranno di più nel ranking.</p>
-            </div>
-            <div class="field">
-                <label for="soft_preferences">Preferenze leggere</label>
-                <textarea id="soft_preferences" name="soft_preferences" rows="8">{{ professional_profile.soft_preferences | join('\n') }}</textarea>
-                <p class="hint">Una voce per riga. Servono come bonus, non come filtro rigido.</p>
-            </div>
+        <h2>Esperienze</h2>
+        <div class="field">
+            <label for="experiences">Esperienze professionali</label>
+            <textarea id="experiences" name="experiences" rows="6">{{ join_lines(professional_profile.experiences) }}</textarea>
         </div>
     </section>
 
     <section class="filter-section">
-        <h2>Competenze e ruoli obiettivo</h2>
-        <div class="filter-two-cols">
-            <div class="field">
-                <label for="skills">Competenze</label>
-                <textarea id="skills" name="skills" rows="10">{{ professional_profile.skills | join('\n') }}</textarea>
-            </div>
-            <div class="field">
-                <label for="target_roles">Ruoli obiettivo</label>
-                <textarea id="target_roles" name="target_roles" rows="10">{{ professional_profile.target_roles | join('\n') }}</textarea>
-            </div>
+        <h2>Certificazioni</h2>
+        <div class="field">
+            <label for="certifications">Certificazioni e attestati</label>
+            <textarea id="certifications" name="certifications" rows="6">{{ join_lines(professional_profile.certifications) }}</textarea>
+        </div>
+    </section>
+
+    <section class="filter-section">
+        <h2>Competenze</h2>
+        <div class="field">
+            <label for="skills">Competenze comunicazione, marketing e contenuti</label>
+            <textarea id="skills" name="skills" rows="10">{{ join_lines(professional_profile.skills) }}</textarea>
+        </div>
+    </section>
+
+    <section class="filter-section">
+        <h2>Competenze tecniche</h2>
+        <div class="field">
+            <label for="technical_skills">Stack tecnico e strumenti</label>
+            <textarea id="technical_skills" name="technical_skills" rows="10">{{ join_lines(professional_profile.technical_skills) }}</textarea>
+        </div>
+    </section>
+
+    <section class="filter-section">
+        <h2>Ruoli obiettivo</h2>
+        <div class="field">
+            <label for="target_roles">Ruoli da prioritizzare nel radar</label>
+            <textarea id="target_roles" name="target_roles" rows="12">{{ join_lines(professional_profile.target_roles) }}</textarea>
+            <p class="hint">Queste voci aiutano ranking, suggerimenti CV e futuri alert intelligenti.</p>
+        </div>
+    </section>
+
+    <section class="filter-section">
+        <h2>Preferenze territoriali</h2>
+        <div class="field">
+            <label for="territorial_preferences">Territori e modalita preferite</label>
+            <textarea id="territorial_preferences" name="territorial_preferences" rows="7">{{ join_lines(professional_profile.territorial_preferences) }}</textarea>
+        </div>
+    </section>
+
+    <section class="filter-section">
+        <h2>Categorie protette</h2>
+        <div class="field">
+            <label for="protected_categories">Dati utili per opportunita L.68/99</label>
+            <textarea id="protected_categories" name="protected_categories" rows="4">{{ join_lines(professional_profile.protected_categories) }}</textarea>
+            <p class="hint">Informazione locale: non caricare documenti sensibili nel repository.</p>
         </div>
     </section>
 
     <section class="filter-section">
         <h2>Note interne</h2>
         <div class="field">
-            <label for="profile_notes">Note</label>
-            <textarea id="profile_notes" name="profile_notes" rows="5">{{ professional_profile.profile_notes }}</textarea>
+            <label for="profile_notes">Note operative</label>
+            <textarea id="profile_notes" name="profile_notes" rows="6">{{ professional_profile.profile_notes }}</textarea>
         </div>
         {% if professional_profile.profile_updated_at %}
             <p class="hint">Ultimo aggiornamento: {{ professional_profile.profile_updated_at }}</p>

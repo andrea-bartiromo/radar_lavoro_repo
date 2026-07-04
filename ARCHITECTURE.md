@@ -1,23 +1,23 @@
 # Architettura di Radar Lavoro
 
-Radar Lavoro e una web app personale per la ricerca, valutazione e gestione delle opportunita di lavoro. Il progetto nasce come applicazione locale per un solo utente, senza login, senza cloud e senza funzionalita multiutente.
+Radar Lavoro e una web app personale per cercare, valutare e gestire opportunita di lavoro. Resta un'app locale per un solo utente: niente login, niente cloud, niente multiutente.
 
 ## Principi guida
 
 1. **Uso personale prima di tutto**
-   L'app deve essere semplice da avviare sul PC dell'utente. Non va progettata come piattaforma pubblica finche non sara una scelta esplicita.
+   L'app deve essere semplice da avviare sul PC dell'utente.
 
 2. **Dati locali**
    Il database SQLite resta sul computer dell'utente. File sensibili, API key, CV e documenti personali non devono essere caricati nel repository.
 
 3. **Modularita progressiva**
-   `app.py` contiene ancora molta logica. Ogni nuova fase deve spostare logica riutilizzabile in moduli separati, senza fare refactoring troppo aggressivi in un solo passaggio.
+   `app.py` contiene ancora molta logica, ma ogni sprint sposta la logica riutilizzabile in moduli dedicati senza refactoring aggressivi.
 
 4. **Sviluppo per sprint**
-   Ogni sprint deve produrre una versione funzionante: backend, database, interfaccia e documentazione devono evolvere insieme.
+   Ogni sprint deve lasciare una versione funzionante: backend, database, interfaccia e documentazione evolvono insieme.
 
 5. **Compatibilita retroattiva**
-   Le modifiche al database devono preservare i dati gia presenti. Le nuove colonne si aggiungono con migrazioni e `ensure_column`.
+   Le modifiche al database devono preservare i dati esistenti. Le nuove colonne si aggiungono con migrazioni e `ensure_column`.
 
 ## Stato attuale
 
@@ -29,60 +29,62 @@ La versione corrente include:
 - filtri avanzati per distanza, modalita, esperienza, contratto, orario, stipendio e categorie protette;
 - ranking di compatibilita 0-100;
 - gestione offerte nuove/visti;
-- CRM candidature di base, con stato candidatura e note personali;
-- documentazione iniziale di roadmap, changelog e migrazioni.
+- CRM candidature con stato candidatura, note, date e offerte seguite;
+- profilo professionale strutturato con formazione, esperienze, certificazioni, competenze, competenze tecniche, ruoli obiettivo, preferenze territoriali e categorie protette.
 
 ## Struttura attuale del repository
 
 ```text
 radar_lavoro_repo/
-├── app.py
-├── radar_candidates.py
-├── requirements.txt
-├── README.md
-├── ROADMAP.md
-├── CHANGELOG.md
-├── ARCHITECTURE.md
-├── docs/
-│   └── SISTEMA_CANDIDATURE.md
-├── migrations/
-│   └── 001_candidature.sql
-├── templates/
-│   ├── base.html
-│   ├── dashboard.html
-│   ├── filtri.html
-│   └── impostazioni.html
-└── static/
-    └── style.css
+|-- app.py
+|-- radar_candidates.py
+|-- radar_profile.py
+|-- requirements.txt
+|-- README.md
+|-- ROADMAP.md
+|-- CHANGELOG.md
+|-- ARCHITECTURE.md
+|-- docs/
+|   |-- SISTEMA_CANDIDATURE.md
+|   `-- PROFILO_PROFESSIONALE.md
+|-- migrations/
+|   |-- 001_candidature.sql
+|   `-- 002_profilo_professionale.sql
+|-- templates/
+|   |-- base.html
+|   |-- dashboard.html
+|   |-- filtri.html
+|   |-- impostazioni.html
+|   `-- profilo.html
+`-- static/
+    `-- style.css
 ```
 
 ## Struttura obiettivo
 
-Nel tempo il progetto dovrebbe arrivare a questa organizzazione:
-
 ```text
 radar_lavoro_repo/
-├── app.py                         # entrypoint Flask minimale
-├── config.py                      # costanti applicative e configurazione
-├── db.py                          # connessione SQLite e migrazioni
-├── services/
-│   ├── jooble_service.py          # chiamate Jooble
-│   ├── ranking_service.py         # compatibilita e motivazioni
-│   ├── filter_service.py          # filtri e pertinenza
-│   ├── candidate_service.py       # CRM candidature
-│   ├── profile_service.py         # profilo professionale
-│   └── contest_service.py         # concorsi pubblici
-├── repositories/
-│   ├── job_repository.py          # query offerte
-│   ├── profile_repository.py      # query profilo
-│   └── document_repository.py     # query documenti
-├── templates/
-├── static/
-├── migrations/
-├── docs/
-├── README.md
-├── ROADMAP.md
-└── CHANGELOG.md
+|-- app.py                         # entrypoint Flask minimale
+|-- config.py                      # costanti applicative e configurazione
+|-- db.py                          # connessione SQLite e migrazioni
+|-- services/
+|   |-- jooble_service.py
+|   |-- ranking_service.py
+|   |-- filter_service.py
+|   |-- candidate_service.py
+|   |-- profile_service.py
+|   `-- contest_service.py
+|-- repositories/
+|   |-- job_repository.py
+|   |-- profile_repository.py
+|   `-- document_repository.py
+|-- templates/
+|-- static/
+|-- migrations/
+|-- docs/
+|-- README.md
+|-- ROADMAP.md
+`-- CHANGELOG.md
 ```
 
 ## Moduli principali
@@ -92,11 +94,11 @@ radar_lavoro_repo/
 Responsabilita attuale:
 
 - inizializzazione Flask;
-- creazione/migrazione database;
+- creazione e migrazione database;
 - route principali;
 - ricerca Jooble;
 - ranking e filtri;
-- rendering dashboard, impostazioni e filtri.
+- rendering dashboard, impostazioni, filtri e profilo.
 
 Obiettivo futuro: mantenere solo avvio app, registrazione route e wiring dei servizi.
 
@@ -111,7 +113,28 @@ Responsabilita:
 - statistiche candidature;
 - aggiornamento stato candidatura e note.
 
-Questo modulo rappresenta il modello da seguire per i prossimi servizi.
+### radar_profile.py
+
+Responsabilita:
+
+- colonne e seed del profilo professionale;
+- lettura e salvataggio della scheda personale;
+- normalizzazione di liste scritte una voce per riga;
+- compatibilita con i campi legacy del profilo;
+- generazione di parole chiave per ranking, CV Manager e Radar AI.
+
+Il profilo e strutturato in:
+
+- identita professionale;
+- formazione;
+- esperienze;
+- certificazioni;
+- competenze;
+- competenze tecniche;
+- ruoli obiettivo;
+- preferenze territoriali;
+- categorie protette;
+- note interne.
 
 ### templates/
 
@@ -120,7 +143,8 @@ Responsabilita:
 - `base.html`: layout, navigazione, sidebar;
 - `dashboard.html`: elenco offerte, punteggi, CRM candidature;
 - `impostazioni.html`: configurazione ricerca;
-- `filtri.html`: filtri avanzati e priorita.
+- `filtri.html`: filtri avanzati e priorita;
+- `profilo.html`: scheda professionale strutturata.
 
 ### static/style.css
 
@@ -129,7 +153,7 @@ Responsabilita:
 - design system visivo;
 - layout dashboard;
 - card offerte;
-- form impostazioni e filtri;
+- form impostazioni, filtri e profilo;
 - componenti CRM candidature.
 
 ## Flusso dati attuale
@@ -143,6 +167,7 @@ Responsabilita:
 7. Gli annunci vengono salvati in SQLite.
 8. La dashboard mostra nuovi annunci e candidature/offerte seguite.
 9. L'utente aggiorna stato candidatura e note.
+10. Il profilo professionale alimenta parole chiave e ranking.
 
 ## Convenzioni codice
 
@@ -151,22 +176,14 @@ Responsabilita:
 - Route Flask: mantenere nomi brevi e leggibili.
 - Ogni nuova funzione riutilizzabile va in un modulo dedicato.
 - Evitare dipendenze esterne non necessarie.
-- Prima di aggiungere una libreria, valutare se basta la standard library.
 
 ## Convenzioni database
 
 - SQLite locale.
 - Nuove colonne tramite `ensure_column` e migrazione SQL in `migrations/`.
 - Mai committare `radar_lavoro.db`.
-- Mai committare API key o documenti personali.
+- Mai committare API key, CV o documenti personali.
 - Ogni tabella deve avere campi testuali semplici e facilmente esportabili.
-
-## Convenzioni UI
-
-- Interfaccia sobria, leggibile, ispirata a registro/protocollo ma moderna.
-- Ogni offerta deve mostrare rapidamente: compatibilita, titolo, azienda, localita, fonte, motivi e azioni.
-- Evitare schermate troppo dense: le funzioni avanzate possono stare in sezioni dedicate.
-- I pulsanti devono indicare chiaramente l'azione.
 
 ## Roadmap architetturale
 
@@ -181,10 +198,15 @@ Responsabilita:
 ### Fase 2 - Profilo professionale
 
 - Profilo unico Andrea.
+- Titolo professionale.
+- Formazione.
+- Esperienze.
+- Certificazioni.
 - Competenze.
-- Preferenze.
-- Titoli di studio.
-- Disponibilita.
+- Competenze tecniche.
+- Ruoli obiettivo.
+- Preferenze territoriali.
+- Categorie protette.
 - Parametri usati dal ranking.
 
 ### Fase 3 - CV e documenti

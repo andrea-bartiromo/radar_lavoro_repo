@@ -2,6 +2,23 @@
 
 Tutte le modifiche importanti al progetto verranno annotate qui.
 
+## Sprint - Profilo professionale
+
+### Aggiunto
+
+- Aggiunto `radar_profile.py` per gestire il profilo professionale unico.
+- Aggiunta pagina `/profilo` con form per dati professionali, preferenze, competenze e ruoli obiettivo.
+- Aggiunte preferenze forti e preferenze leggere.
+- Aggiunta migrazione `migrations/002_profilo_professionale.sql`.
+- Aggiunta documentazione `docs/PROFILO_PROFESSIONALE.md`.
+- Attivata la voce Profilo nella navigazione laterale.
+
+### Modificato
+
+- `app.py` inizializza e salva i nuovi campi del profilo professionale.
+- Il ranking puo usare le parole chiave del profilo professionale.
+- Aggiunta la costante `PAROLE_TROPPO_GENERICHE` per rendere piu robusto il calcolo della pertinenza.
+
 ## Fase 1 - CRM candidature
 
 ### Aggiunto

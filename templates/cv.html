@@ -1,0 +1,188 @@
+{% extends "base.html" %}
+{% block title %}CV Manager - Radar Lavoro{% endblock %}
+
+{% block content %}
+<section class="hero hero-v2">
+    <div>
+        <span class="eyebrow">Documenti candidatura</span>
+        <h1>CV Manager</h1>
+        <p class="hero-sub">Archivio locale dei curriculum e base per i futuri suggerimenti automatici di Radar AI.</p>
+    </div>
+</section>
+
+<div class="cv-layout">
+    <form class="form-card cv-form" method="post">
+        <section class="filter-section">
+            <h2>{{ "Modifica CV" if edit_cv else "Aggiungi CV" }}</h2>
+            {% if edit_cv %}
+                <input type="hidden" name="cv_id" value="{{ edit_cv.id }}">
+            {% endif %}
+
+            <div class="filter-two-cols">
+                <div class="field">
+                    <label for="name">Nome</label>
+                    <input id="name" type="text" name="name" value="{{ edit_cv.name if edit_cv else '' }}" placeholder="CV Digital Marketing">
+                </div>
+                <div class="field">
+                    <label for="version">Versione</label>
+                    <input id="version" type="text" name="version" value="{{ edit_cv.version if edit_cv else '' }}" placeholder="v1.0">
+                </div>
+            </div>
+
+            <div class="field">
+                <label for="description">Descrizione</label>
+                <textarea id="description" name="description" rows="3" placeholder="Taglio, obiettivo o contesto di utilizzo">{{ edit_cv.description if edit_cv else '' }}</textarea>
+            </div>
+        </section>
+
+        <section class="filter-section">
+            <h2>Classificazione</h2>
+            <div class="filter-two-cols">
+                <div class="field">
+                    <label for="category">Categoria</label>
+                    <select id="category" name="category">
+                        {% for category in cv_categories %}
+                            <option value="{{ category }}" {% if edit_cv and edit_cv.category == category %}selected{% endif %}>{{ category }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="field">
+                    <label for="file_format">Formato</label>
+                    <select id="file_format" name="file_format">
+                        {% for file_format in cv_format_options %}
+                            <option value="{{ file_format }}" {% if edit_cv and edit_cv.file_format == file_format %}selected{% endif %}>{{ file_format }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div class="field">
+                <label for="file_path">Percorso file</label>
+                <input id="file_path" type="text" name="file_path" value="{{ edit_cv.file_path if edit_cv else '' }}" placeholder="C:\Percorso\locale\cv-marketing.pdf">
+                <p class="hint">Il file resta locale: nel database viene salvato solo il percorso.</p>
+            </div>
+
+            <div class="field">
+                <label for="checksum">Checksum opzionale</label>
+                <input id="checksum" type="text" name="checksum" value="{{ edit_cv.checksum if edit_cv else '' }}" placeholder="Opzionale">
+            </div>
+        </section>
+
+        <section class="filter-section">
+            <h2>Stato</h2>
+            <div class="choice-grid">
+                <label class="choice-card">
+                    <input type="checkbox" name="is_active" {% if not edit_cv or edit_cv.is_active %}checked{% endif %}>
+                    Attivo
+                </label>
+                <label class="choice-card">
+                    <input type="checkbox" name="is_default" {% if edit_cv and edit_cv.is_default %}checked{% endif %}>
+                    Predefinito
+                </label>
+            </div>
+        </section>
+
+        <section class="filter-section">
+            <h2>Note</h2>
+            <div class="field">
+                <label for="notes">Note interne</label>
+                <textarea id="notes" name="notes" rows="4" placeholder="Uso consigliato, punti forti o revisioni da fare">{{ edit_cv.notes if edit_cv else '' }}</textarea>
+            </div>
+        </section>
+
+        <div class="form-actions">
+            <button class="btn-primary" type="submit">{{ "Salva modifiche" if edit_cv else "Aggiungi CV" }}</button>
+            {% if edit_cv %}
+                <a class="btn-ghost" href="{{ url_for('cv_manager') }}">Annulla modifica</a>
+            {% endif %}
+        </div>
+    </form>
+
+    <aside class="cv-side">
+        <article class="insight-card cv-suggestion">
+            <span class="eyebrow">Suggerito automaticamente</span>
+            {% if suggested_cv %}
+                <h2>{{ suggested_cv.name }}</h2>
+                <p>{{ suggested_cv.category }}</p>
+                <small>{{ suggested_cv.suggestion_reason }}</small>
+            {% else %}
+                <h2>In attesa dei CV</h2>
+                <p>Qui verra mostrato il curriculum piu adatto per ogni candidatura.</p>
+                <small>Pronto per lo Sprint Radar AI.</small>
+            {% endif %}
+        </article>
+    </aside>
+</div>
+
+<section class="cv-list-section">
+    <div class="section-title-row">
+        <div>
+            <span class="eyebrow">Archivio locale</span>
+            <h2>Curriculum salvati</h2>
+        </div>
+    </div>
+
+    <div class="cv-grid">
+        {% for cv in cv_documents %}
+            <article class="cv-card">
+                <div class="cv-card-head">
+                    <div>
+                        <span class="cv-category">{{ cv.category }}</span>
+                        <h3>{{ cv.name }}</h3>
+                        {% if cv.description %}
+                            <p>{{ cv.description }}</p>
+                        {% endif %}
+                    </div>
+                    <div class="cv-status-stack">
+                        <span class="cv-state {{ 'active' if cv.is_active else 'inactive' }}">{{ "Attivo" if cv.is_active else "Non attivo" }}</span>
+                        {% if cv.is_default %}
+                            <span class="cv-state default">Predefinito</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <dl class="cv-meta-grid">
+                    <div>
+                        <dt>Versione</dt>
+                        <dd>{{ cv.version or "Non indicata" }}</dd>
+                    </div>
+                    <div>
+                        <dt>Formato</dt>
+                        <dd>{{ cv.file_format or "Non indicato" }}</dd>
+                    </div>
+                    <div>
+                        <dt>Creato</dt>
+                        <dd>{{ cv.created_at_label or "Non indicato" }}</dd>
+                    </div>
+                    <div>
+                        <dt>Ultima modifica</dt>
+                        <dd>{{ cv.updated_at_label or "Non indicata" }}</dd>
+                    </div>
+                </dl>
+
+                {% if cv.file_path %}
+                    <p class="cv-path">{{ cv.file_path }}</p>
+                {% endif %}
+                {% if cv.notes %}
+                    <p class="cv-note">{{ cv.notes }}</p>
+                {% endif %}
+
+                <div class="cv-actions">
+                    <a class="btn-ghost" href="{{ url_for('cv_manager', edit=cv.id) }}">Modifica</a>
+                    <form method="post" action="{{ url_for('imposta_cv_predefinito', cv_id=cv.id) }}">
+                        <button class="btn-secondary" type="submit" {% if cv.is_default %}disabled{% endif %}>Imposta predefinito</button>
+                    </form>
+                    <form method="post" action="{{ url_for('elimina_cv', cv_id=cv.id) }}" onsubmit="return confirm('Eliminare questo CV dal manager? Il file locale non verra cancellato.');">
+                        <button class="btn-ghost danger" type="submit">Elimina</button>
+                    </form>
+                </div>
+            </article>
+        {% else %}
+            <div class="empty-state">
+                <strong>Nessun CV salvato</strong>
+                <p>Aggiungi un primo curriculum usando il modulo in alto.</p>
+            </div>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}

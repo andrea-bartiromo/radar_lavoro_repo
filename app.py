@@ -23,6 +23,16 @@ from radar_candidates import (
     split_jobs_by_application_status,
     update_application,
 )
+from radar_cv import (
+    CV_CATEGORIES,
+    CV_FORMAT_OPTIONS,
+    delete_cv,
+    ensure_cv_schema,
+    find_best_cv,
+    load_cv,
+    save_cv,
+    set_default_cv,
+)
 from radar_profile import (
     ensure_professional_profile_columns,
     join_lines,
@@ -208,6 +218,7 @@ def init_db():
         ("applied_at", "TEXT DEFAULT ''"), ("last_status_at", "TEXT DEFAULT ''"),
     ]:
         ensure_column(conn, "jobs", column, definition)
+    ensure_cv_schema(conn, ensure_column)
     conn.execute(
         """
         UPDATE jobs
@@ -716,6 +727,58 @@ def profilo():
         professional_profile=professional_profile,
         join_lines=join_lines,
     )
+
+
+@app.route("/cv", methods=["GET", "POST"])
+def cv_manager():
+    conn = get_db()
+    if request.method == "POST":
+        raw_cv_id = request.form.get("cv_id", "").strip()
+        cv_id = int(raw_cv_id) if raw_cv_id.isdigit() else None
+        save_cv(conn, request.form, cv_id)
+        conn.commit()
+        conn.close()
+        flash("CV aggiornato." if cv_id else "CV aggiunto.", "successo")
+        return redirect(url_for("cv_manager"))
+
+    edit_id = request.args.get("edit", type=int)
+    edit_cv = load_cv(conn, edit_id) if edit_id else None
+    if edit_id and edit_cv is None:
+        conn.close()
+        flash("CV non trovato.", "errore")
+        return redirect(url_for("cv_manager"))
+
+    cv_documents = load_cv(conn)
+    suggested_cv = find_best_cv(conn)
+    conn.close()
+    return render_template(
+        "cv.html",
+        cv_documents=cv_documents,
+        edit_cv=edit_cv,
+        suggested_cv=suggested_cv,
+        cv_categories=CV_CATEGORIES,
+        cv_format_options=CV_FORMAT_OPTIONS,
+    )
+
+
+@app.route("/cv/<int:cv_id>/elimina", methods=["POST"])
+def elimina_cv(cv_id):
+    conn = get_db()
+    deleted = delete_cv(conn, cv_id)
+    conn.commit()
+    conn.close()
+    flash("CV eliminato dal manager." if deleted else "CV non trovato.", "successo" if deleted else "errore")
+    return redirect(url_for("cv_manager"))
+
+
+@app.route("/cv/<int:cv_id>/predefinito", methods=["POST"])
+def imposta_cv_predefinito(cv_id):
+    conn = get_db()
+    updated = set_default_cv(conn, cv_id)
+    conn.commit()
+    conn.close()
+    flash("CV impostato come predefinito." if updated else "CV non trovato.", "successo" if updated else "errore")
+    return redirect(url_for("cv_manager"))
 
 
 if __name__ == "__main__":

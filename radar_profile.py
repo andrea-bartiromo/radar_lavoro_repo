@@ -11,43 +11,53 @@ from datetime import datetime
 
 LEGACY_DEFAULT_HEADLINE = "Corporate Communication, Digital Marketing e contenuti digitali"
 LEGACY_DEFAULT_EDUCATION = "Laurea Magistrale in Corporate Communication - Universita degli Studi di Salerno"
-PROFILE_SCHEMA_VERSION = "profilo_strutturato_v1"
+PROFILE_SCHEMA_VERSION = "profilo_strutturato_v2_cv_reale"
 
 DEFAULT_PROFILE = {
     "full_name": "Andrea Bartiromo",
     "headline": (
-        "Studente Magistrale in Corporate Communication | Comunicazione Digitale | "
-        "Digital Marketing | Content Creation | Giornalismo | Full Stack Web Development"
+        "Digital & Communication Specialist | Comunicazione Digitale | Digital Marketing | "
+        "Giornalismo | Full Stack Web Developer | Data Analysis"
     ),
     "education_items": [
         "Laurea Magistrale in Corporate Communication, Universita degli Studi di Salerno, in corso",
         "Laurea Triennale in Scienze della Comunicazione, Universita degli Studi di Salerno",
         "Hackademy+ Full Stack Web Developer, Aulab",
+        "Diploma di Maturita Classica, Liceo G.B. Vico, Nocera Inferiore",
     ],
     "experiences": [
-        "Apprendista Giornalista, Nuovo Nocera, 2024 - oggi",
+        "Apprendista giornalista, Nuovo Nocera, 2024 - oggi",
         "Social Media Manager, Universita degli Studi di Salerno, 2021 - 2022",
     ],
     "certifications": [
         "Cisco Cybersecurity",
-        "Python Programming",
-        "Data Analyst",
-        "AI Avanzata",
-        "EIPASS 7 Moduli",
+        "Data Analyst - Fondazione Mondo Digitale",
+        "AI Avanzata - Profession AI",
+        "Programmazione Python - Profession AI",
+        "EIPASS 7 Moduli User",
+        "Public Speaking - Lacerba",
+        "Analisi dei rischi economico-finanziari d'impresa - Universita Federico II",
     ],
     "skills": [
         "Corporate Communication",
         "Comunicazione Digitale",
+        "Digital Marketing",
         "Content Marketing",
         "Social Media Management",
-        "Digital Marketing",
+        "Copywriting",
+        "Storytelling",
         "SEO",
         "SEM",
-        "Copywriting",
-        "Content Creation",
         "Web Analytics",
+        "Content Creation",
         "Giornalismo",
+        "Fact Checking",
+        "Analisi fonti",
+        "Gestione contenuti digitali",
+        "Gestione CMS",
         "Ufficio Stampa",
+        "Comunicazione istituzionale",
+        "Public Speaking",
     ],
     "technical_skills": [
         "HTML",
@@ -57,18 +67,24 @@ DEFAULT_PROFILE = {
         "Laravel",
         "Python",
         "MySQL",
+        "SQL",
         "API REST",
         "Git",
         "GitHub",
         "VS Code",
+        "Composer",
         "Postman",
+        "phpMyAdmin",
+        "React.js base",
         "Canva",
-        "Figma",
+        "Meta Business Suite",
         "Microsoft Office",
+        "Cybersecurity basics",
     ],
     "target_roles": [
-        "Addetto Comunicazione",
+        "Digital Communication Specialist",
         "Corporate Communication Specialist Junior",
+        "Addetto Comunicazione",
         "Digital Marketing Assistant",
         "Social Media Specialist",
         "Content Creator",
@@ -76,10 +92,11 @@ DEFAULT_PROFILE = {
         "Web Content Editor",
         "Ufficio Stampa",
         "Redattore",
-        "Digital Communication Specialist",
+        "Giornalista",
+        "Junior Web Developer",
+        "Junior Full Stack Developer",
         "Junior Data Analyst",
-        "Web Developer Junior",
-        "Operatore Amministrativo Categorie Protette",
+        "Operatore Amministrativo",
         "Communication Officer",
         "Marketing Assistant",
     ],
@@ -91,16 +108,15 @@ DEFAULT_PROFILE = {
         "Disponibile a valutare tutta Italia per opportunita di particolare interesse",
     ],
     "protected_categories": [
-        "Art.1 Legge 68/99",
-        "Invalidita civile 75%",
+        "Informazioni riservate da completare localmente nell'app",
     ],
     "availability": (
-        "Disponibile per opportunita junior, comunicazione digitale, marketing, "
-        "giornalismo, sviluppo web, remoto/ibrido e categorie protette."
+        "Disponibile per opportunita junior, stage, apprendistato, part-time, comunicazione digitale, "
+        "digital marketing, giornalismo, sviluppo web, data analysis e lavoro remoto/ibrido."
     ),
     "notes": (
-        "Profilo strutturato per guidare ranking, CV Manager, archivio documenti, "
-        "concorsi pubblici, Radar AI e motore di apprendimento."
+        "Profilo aggiornato dai CV personali caricati: comunicazione, giornalismo, sviluppo web, "
+        "data analysis e competenze digitali. Le informazioni riservate restano modificabili localmente."
     ),
 }
 
@@ -185,26 +201,24 @@ def ensure_professional_profile_columns(conn, ensure_column):
 
 def _default_strong_preferences():
     return [
-        "Categorie protette L.68/99",
-        "Art.1 Legge 68/99",
-        "Invalidita civile 75%",
         "Provincia di Salerno",
         "Campania",
         "Remoto",
         "Ibrido",
         "Comunicazione Digitale",
+        "Digital Marketing",
         "Corporate Communication",
     ]
 
 
 def _default_soft_preferences():
     return [
-        "Digital Marketing",
         "Content Creation",
         "Giornalismo",
         "Ufficio Stampa",
+        "Junior Web Developer",
+        "Junior Full Stack Developer",
         "Junior Data Analyst",
-        "Web Developer Junior",
         "Tutta Italia per opportunita di particolare interesse",
     ]
 

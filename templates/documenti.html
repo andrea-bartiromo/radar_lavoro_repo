@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+
+{% block title %}Archivio documenti - Radar Lavoro{% endblock %}
+
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Archivio locale</p>
+        <h1>Documenti</h1>
+        <p>Gestisci CV, certificazioni, attestati, lettere e allegati senza caricare file nel repository.</p>
+    </div>
+    <div class="header-actions">
+        <a class="btn secondary" href="{{ url_for('cv_manager') }}">Vai al CV Manager</a>
+    </div>
+</section>
+
+<section class="stats-grid compact-stats">
+    <div class="stat-card">
+        <span>Totale</span>
+        <strong>{{ stats.total }}</strong>
+    </div>
+    <div class="stat-card">
+        <span>Preferiti</span>
+        <strong>{{ stats.favorites }}</strong>
+    </div>
+    <div class="stat-card">
+        <span>Attivi</span>
+        <strong>{{ stats.active }}</strong>
+    </div>
+    <div class="stat-card warning">
+        <span>Scaduti</span>
+        <strong>{{ stats.expired }}</strong>
+    </div>
+</section>
+
+<section class="panel document-filters-panel">
+    <form method="GET" class="filters-row">
+        <label>
+            Cerca
+            <input type="text" name="q" value="{{ filters.q }}" placeholder="Nome, tag, note...">
+        </label>
+        <label>
+            Categoria
+            <select name="category">
+                <option value="">Tutte</option>
+                {% for category in document_categories %}
+                    <option value="{{ category }}" {% if filters.category == category %}selected{% endif %}>{{ category }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>
+            Stato
+            <select name="status">
+                <option value="">Tutti</option>
+                {% for status in document_status_options %}
+                    <option value="{{ status }}" {% if filters.status == status %}selected{% endif %}>{{ status }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <button class="btn" type="submit">Filtra</button>
+        <a class="btn ghost" href="{{ url_for('documenti') }}">Reset</a>
+    </form>
+</section>
+
+<section class="two-column-layout documents-layout">
+    <div class="panel">
+        <div class="section-heading">
+            <div>
+                <p class="eyebrow">Archivio</p>
+                <h2>Documenti salvati</h2>
+            </div>
+        </div>
+
+        {% if documents %}
+            <div class="document-list">
+                {% for document in documents %}
+                    <article class="document-card {% if document.is_expired %}expired{% endif %}">
+                        <div class="document-main">
+                            <div>
+                                <div class="document-title-row">
+                                    <h3>{{ document.name }}</h3>
+                                    {% if document.is_favorite %}<span class="pill highlight">Preferito</span>{% endif %}
+                                    {% if document.is_expired %}<span class="pill danger">Scaduto</span>{% endif %}
+                                </div>
+                                <p>{{ document.document_type or document.category }}</p>
+                                <div class="tag-row">
+                                    <span class="tag">{{ document.category }}</span>
+                                    <span class="tag">{{ document.file_format or 'Altro' }}</span>
+                                    <span class="tag muted">{{ document.status }}</span>
+                                    {% for tag in document.tags_list %}
+                                        <span class="tag subtle">{{ tag }}</span>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            <div class="document-actions">
+                                <a class="btn small secondary" href="{{ url_for('documenti', edit=document.id) }}">Modifica</a>
+                                <form method="POST" action="{{ url_for('preferito_documento', document_id=document.id) }}">
+                                    <button class="btn small ghost" type="submit">{% if document.is_favorite %}Rimuovi preferito{% else %}Preferito{% endif %}</button>
+                                </form>
+                                <form method="POST" action="{{ url_for('elimina_documento', document_id=document.id) }}" onsubmit="return confirm('Eliminare il record dal manager? Il file locale non verra cancellato.');">
+                                    <button class="btn small danger" type="submit">Elimina</button>
+                                </form>
+                            </div>
+                        </div>
+                        <dl class="document-meta">
+                            <div><dt>Percorso</dt><dd>{{ document.file_path or 'Da impostare' }}</dd></div>
+                            {% if document.issuer %}<div><dt>Ente</dt><dd>{{ document.issuer }}</dd></div>{% endif %}
+                            {% if document.version %}<div><dt>Versione</dt><dd>{{ document.version }}</dd></div>{% endif %}
+                            {% if document.expires_at %}<div><dt>Scadenza</dt><dd>{{ document.expires_at }}</dd></div>{% endif %}
+                            <div><dt>Aggiornato</dt><dd>{{ document.updated_at_label or '-' }}</dd></div>
+                        </dl>
+                        {% if document.notes %}<p class="document-notes">{{ document.notes }}</p>{% endif %}
+                    </article>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <h3>Nessun documento trovato</h3>
+                <p>Aggiungi un documento o modifica i filtri di ricerca.</p>
+            </div>
+        {% endif %}
+    </div>
+
+    <aside class="panel sticky-panel">
+        <div class="section-heading">
+            <div>
+                <p class="eyebrow">{{ 'Modifica' if edit_document else 'Nuovo' }}</p>
+                <h2>{{ 'Modifica documento' if edit_document else 'Aggiungi documento' }}</h2>
+            </div>
+        </div>
+
+        <form method="POST" class="stacked-form">
+            {% if edit_document %}<input type="hidden" name="document_id" value="{{ edit_document.id }}">{% endif %}
+
+            <label>Nome
+                <input type="text" name="name" value="{{ edit_document.name if edit_document else '' }}" required>
+            </label>
+
+            <label>Categoria
+                <select name="category">
+                    {% for category in document_categories %}
+                        <option value="{{ category }}" {% if edit_document and edit_document.category == category %}selected{% endif %}>{{ category }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+
+            <label>Tipo documento
+                <input type="text" name="document_type" value="{{ edit_document.document_type if edit_document else '' }}" placeholder="Es. Certificazione, attestato, lettera...">
+            </label>
+
+            <label>Percorso locale o link
+                <input type="text" name="file_path" value="{{ edit_document.file_path if edit_document else '' }}" placeholder="C:\\Users\\... oppure link">
+            </label>
+
+            <div class="form-grid-2">
+                <label>Formato
+                    <select name="file_format">
+                        {% for option in document_format_options %}
+                            <option value="{{ option }}" {% if edit_document and edit_document.file_format == option %}selected{% endif %}>{{ option }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <label>Stato
+                    <select name="status">
+                        {% for option in document_status_options %}
+                            <option value="{{ option }}" {% if edit_document and edit_document.status == option %}selected{% endif %}>{{ option }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+            </div>
+
+            <div class="form-grid-2">
+                <label>Versione
+                    <input type="text" name="version" value="{{ edit_document.version if edit_document else '' }}" placeholder="Es. 2026, v1">
+                </label>
+                <label>Scadenza
+                    <input type="date" name="expires_at" value="{{ edit_document.expires_at if edit_document else '' }}">
+                </label>
+            </div>
+
+            <label>Ente rilasciante
+                <input type="text" name="issuer" value="{{ edit_document.issuer if edit_document else '' }}" placeholder="Es. Cisco, UNISA, Comune...">
+            </label>
+
+            <label>Tag
+                <input type="text" name="tags" value="{{ edit_document.tags if edit_document else '' }}" placeholder="Separali con virgola">
+            </label>
+
+            <label>Note
+                <textarea name="notes" rows="4">{{ edit_document.notes if edit_document else '' }}</textarea>
+            </label>
+
+            <label class="checkbox-line">
+                <input type="checkbox" name="is_favorite" {% if edit_document and edit_document.is_favorite %}checked{% endif %}>
+                Documento preferito
+            </label>
+            <label class="checkbox-line">
+                <input type="checkbox" name="is_active" {% if not edit_document or edit_document.is_active %}checked{% endif %}>
+                Documento attivo
+            </label>
+
+            <div class="form-actions">
+                <button class="btn" type="submit">{{ 'Salva modifiche' if edit_document else 'Aggiungi documento' }}</button>
+                {% if edit_document %}<a class="btn ghost" href="{{ url_for('documenti') }}">Annulla</a>{% endif %}
+            </div>
+        </form>
+    </aside>
+</section>
+{% endblock %}

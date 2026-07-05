@@ -44,6 +44,22 @@ from radar_documents import (
     load_documents,
     save_document,
 )
+from radar_public_competitions import (
+    COMPETITION_APPLICATION_STATUS_OPTIONS,
+    COMPETITION_ARCHIVE_FILTER_OPTIONS,
+    COMPETITION_CATEGORIES,
+    COMPETITION_STATUS_OPTIONS,
+    archive_competition,
+    competition_filters_from_args,
+    competition_stats as build_competition_stats,
+    dashboard_competition_stats,
+    delete_competition,
+    ensure_public_competitions_schema,
+    link_competition_document,
+    load_competitions,
+    remove_competition_document,
+    save_competition,
+)
 from radar_profile import (
     ensure_professional_profile_columns,
     join_lines,
@@ -231,6 +247,7 @@ def init_db():
         ensure_column(conn, "jobs", column, definition)
     ensure_cv_schema(conn, ensure_column)
     ensure_document_schema(conn, ensure_column)
+    ensure_public_competitions_schema(conn, ensure_column)
     conn.execute(
         """
         UPDATE jobs
@@ -608,6 +625,7 @@ def dashboard():
         """SELECT * FROM jobs WHERE search_location = ? ORDER BY compatibility_score DESC, first_seen_at DESC LIMIT 150""",
         (profile["search_location"],),
     ).fetchall()
+    competition_overview = dashboard_competition_stats(conn)
     conn.close()
     filtered_jobs = []
     for row in rows:
@@ -621,6 +639,7 @@ def dashboard():
         candidature=candidature,
         stats=stats,
         application_status_options=APPLICATION_STATUS_OPTIONS,
+        competition_overview=competition_overview,
         profile=profile,
     )
 
@@ -847,6 +866,85 @@ def archivia_documento(document_id):
     conn.close()
     flash("Documento archiviato." if archived else "Documento non trovato.", "successo" if archived else "errore")
     return redirect(url_for("archivio_documenti"))
+
+
+@app.route("/concorsi", methods=["GET", "POST"])
+def concorsi_pubblici():
+    conn = get_db()
+    if request.method == "POST":
+        raw_competition_id = request.form.get("competition_id", "").strip()
+        competition_id = int(raw_competition_id) if raw_competition_id.isdigit() else None
+        save_competition(conn, request.form, competition_id)
+        conn.commit()
+        conn.close()
+        flash("Concorso aggiornato." if competition_id else "Concorso aggiunto.", "successo")
+        return redirect(url_for("concorsi_pubblici"))
+
+    edit_id = request.args.get("edit", type=int)
+    edit_competition = load_competitions(conn, edit_id) if edit_id else None
+    if edit_id and edit_competition is None:
+        conn.close()
+        flash("Concorso non trovato.", "errore")
+        return redirect(url_for("concorsi_pubblici"))
+
+    filters = competition_filters_from_args(request.args)
+    competitions = load_competitions(conn, filters=filters)
+    documents = load_documents(conn)
+    stats = build_competition_stats(competitions)
+    conn.close()
+    return render_template(
+        "concorsi.html",
+        competitions=competitions,
+        edit_competition=edit_competition,
+        documents=documents,
+        filters=filters,
+        stats=stats,
+        competition_categories=COMPETITION_CATEGORIES,
+        competition_status_options=COMPETITION_STATUS_OPTIONS,
+        competition_application_status_options=COMPETITION_APPLICATION_STATUS_OPTIONS,
+        competition_archive_filter_options=COMPETITION_ARCHIVE_FILTER_OPTIONS,
+        join_lines=join_lines,
+    )
+
+
+@app.route("/concorsi/<int:competition_id>/elimina", methods=["POST"])
+def elimina_concorso(competition_id):
+    conn = get_db()
+    deleted = delete_competition(conn, competition_id)
+    conn.commit()
+    conn.close()
+    flash("Concorso eliminato." if deleted else "Concorso non trovato.", "successo" if deleted else "errore")
+    return redirect(url_for("concorsi_pubblici"))
+
+
+@app.route("/concorsi/<int:competition_id>/archivia", methods=["POST"])
+def archivia_concorso(competition_id):
+    conn = get_db()
+    archived = archive_competition(conn, competition_id)
+    conn.commit()
+    conn.close()
+    flash("Concorso archiviato." if archived else "Concorso non trovato.", "successo" if archived else "errore")
+    return redirect(url_for("concorsi_pubblici"))
+
+
+@app.route("/concorsi/<int:competition_id>/documenti", methods=["POST"])
+def collega_documento_concorso(competition_id):
+    conn = get_db()
+    linked = link_competition_document(conn, competition_id, request.form)
+    conn.commit()
+    conn.close()
+    flash("Documento collegato al concorso." if linked else "Documento o concorso non valido.", "successo" if linked else "errore")
+    return redirect(url_for("concorsi_pubblici", edit=competition_id))
+
+
+@app.route("/concorsi/<int:competition_id>/documenti/<int:link_id>/rimuovi", methods=["POST"])
+def rimuovi_documento_concorso(competition_id, link_id):
+    conn = get_db()
+    removed = remove_competition_document(conn, competition_id, link_id)
+    conn.commit()
+    conn.close()
+    flash("Collegamento rimosso." if removed else "Collegamento non trovato.", "successo" if removed else "errore")
+    return redirect(url_for("concorsi_pubblici", edit=competition_id))
 
 
 if __name__ == "__main__":

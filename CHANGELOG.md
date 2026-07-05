@@ -2,6 +2,28 @@
 
 Tutte le modifiche importanti al progetto verranno annotate qui.
 
+## Sprint 5 - Concorsi Pubblici
+
+### Aggiunto
+
+- Aggiunto `radar_public_competitions.py` come modulo dedicato ai concorsi pubblici.
+- Creata la tabella `public_competitions` per salvare bandi, ente, categoria, scadenze, stati, requisiti e note.
+- Creata la tabella `competition_documents` per collegare concorsi e documenti dell'Archivio Documenti.
+- Aggiunta la pagina `/concorsi` con elenco bandi, form di aggiunta/modifica, filtri, archiviazione ed eliminazione.
+- Aggiunta gestione documenti collegati con stato richiesto/pronto.
+- Aggiunto indicatore di completezza domanda.
+- Aggiunta evidenza delle scadenze entro 7 giorni.
+- Aggiunta la voce **Concorsi Pubblici** nella sidebar.
+- Aggiunto widget sintetico Concorsi Pubblici nella dashboard.
+- Aggiunta la migrazione `migrations/005_public_competitions.sql`.
+- Creata la documentazione `docs/PUBLIC_COMPETITIONS.md`.
+
+### Modificato
+
+- Aggiornato `app.py` solo per inizializzare lo schema concorsi e collegare le route.
+- Aggiornati `ROADMAP.md` e `ARCHITECTURE.md` con lo Sprint 5.
+- Aggiornato `static/style.css` con i componenti visuali dei concorsi pubblici.
+
 ## Sprint 4 - Archivio Documenti
 
 ### Aggiunto

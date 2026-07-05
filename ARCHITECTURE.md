@@ -33,6 +33,7 @@ La versione corrente include:
 - profilo professionale strutturato con formazione, esperienze, certificazioni, competenze, competenze tecniche, ruoli obiettivo, preferenze territoriali e categorie protette.
 - CV Manager locale con metadati dei curriculum, categorie, stato attivo, CV predefinito e suggerimento iniziale per categoria.
 - Archivio Documenti locale con metadati, categorie, tag, stato, percorsi file e collegamento opzionale ai CV.
+- Concorsi Pubblici con bandi, scadenze, stato domanda, documenti collegati e completezza candidatura.
 
 ## Struttura attuale del repository
 
@@ -42,6 +43,7 @@ radar_lavoro_repo/
 |-- radar_candidates.py
 |-- radar_cv.py
 |-- radar_documents.py
+|-- radar_public_competitions.py
 |-- radar_profile.py
 |-- requirements.txt
 |-- README.md
@@ -52,14 +54,17 @@ radar_lavoro_repo/
 |   |-- SISTEMA_CANDIDATURE.md
 |   |-- PROFILO_PROFESSIONALE.md
 |   |-- CV_MANAGER.md
-|   `-- DOCUMENT_ARCHIVE.md
+|   |-- DOCUMENT_ARCHIVE.md
+|   `-- PUBLIC_COMPETITIONS.md
 |-- migrations/
 |   |-- 001_candidature.sql
 |   |-- 002_profilo_professionale.sql
 |   |-- 003_cv_manager.sql
-|   `-- 004_document_archive.sql
+|   |-- 004_document_archive.sql
+|   `-- 005_public_competitions.sql
 |-- templates/
 |   |-- base.html
+|   |-- concorsi.html
 |   |-- cv.html
 |   |-- dashboard.html
 |   |-- documenti.html
@@ -87,7 +92,8 @@ radar_lavoro_repo/
 |-- repositories/
 |   |-- job_repository.py
 |   |-- profile_repository.py
-|   `-- document_repository.py
+|   |-- document_repository.py
+|   `-- competition_repository.py
 |-- templates/
 |-- static/
 |-- migrations/
@@ -108,7 +114,7 @@ Responsabilita attuale:
 - route principali;
 - ricerca Jooble;
 - ranking e filtri;
-- rendering dashboard, impostazioni, filtri e profilo.
+- rendering dashboard, impostazioni, filtri, profilo, CV, documenti e concorsi.
 
 Obiettivo futuro: mantenere solo avvio app, registrazione route e wiring dei servizi.
 
@@ -172,11 +178,27 @@ Responsabilita:
 Il modulo salva solo metadati e percorsi locali. I file personali non vengono
 copiati, caricati o salvati nel database.
 
+### radar_public_competitions.py
+
+Responsabilita:
+
+- schema e compatibilita delle tabelle `public_competitions` e `competition_documents`;
+- categorie e stati di concorso/domanda;
+- lettura, salvataggio, archiviazione ed eliminazione dei concorsi;
+- filtri per testo, stato domanda, stato concorso e archivio;
+- collegamento con i documenti locali dell'Archivio Documenti;
+- statistiche sintetiche e scadenze entro 7 giorni;
+- calcolo semplice della completezza domanda.
+
+Il modulo non salva allegati o documenti personali. Conserva solo stati,
+metadati e riferimenti ai record dell'Archivio Documenti.
+
 ### templates/
 
 Responsabilita:
 
 - `base.html`: layout, navigazione, sidebar;
+- `concorsi.html`: bandi pubblici, filtri, form, documenti collegati e completezza domanda;
 - `dashboard.html`: elenco offerte, punteggi, CRM candidature;
 - `cv.html`: archivio CV, form metadati, stato attivo, predefinito e suggerimento automatico;
 - `documenti.html`: archivio documenti, form metadati, tag, stato e collegamento CV;
@@ -191,7 +213,7 @@ Responsabilita:
 - design system visivo;
 - layout dashboard;
 - card offerte;
-- form impostazioni, filtri, profilo, CV Manager e Archivio Documenti;
+- form impostazioni, filtri, profilo, CV Manager, Archivio Documenti e Concorsi Pubblici;
 - componenti CRM candidature.
 
 ## Flusso dati attuale
@@ -208,6 +230,7 @@ Responsabilita:
 10. Il profilo professionale alimenta parole chiave e ranking.
 11. Il CV Manager mantiene i curriculum locali e prepara il suggerimento del CV piu adatto.
 12. L'Archivio Documenti mantiene metadati e percorsi locali dei documenti utili a candidature e concorsi.
+13. Concorsi Pubblici segue bandi, scadenze, stato domanda e documenti collegati.
 
 ## Convenzioni codice
 
@@ -264,7 +287,9 @@ Responsabilita:
 - Scadenze.
 - Requisiti.
 - Stato domanda.
-- Priorita L.68/99 e PA.
+- Collegamento documenti.
+- Completezza domanda.
+- Priorita L.68/99 e PA da rafforzare nei prossimi sprint.
 
 ### Fase 5 - Radar AI
 

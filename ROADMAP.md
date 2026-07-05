@@ -17,6 +17,7 @@ Radar Lavoro e una web app locale in Flask pensata per un solo utente. La versio
 - salvare un profilo professionale strutturato con formazione, esperienze, certificazioni, competenze, ruoli obiettivo e preferenze territoriali.
 - gestire un archivio locale di CV con categorie, versioni, percorso file, stato attivo e CV predefinito.
 - gestire un archivio locale di documenti con categorie, tag, stati, percorsi file e collegamento opzionale ai CV.
+- gestire concorsi pubblici con scadenze, stato domanda, documenti collegati e completezza candidatura.
 
 ## Versione 1.1 - Stabilizzazione personale
 
@@ -46,9 +47,12 @@ Obiettivo: rendere Radar Lavoro particolarmente utile per offerte L.68/99 e oppo
 
 - [ ] Rafforzare il riconoscimento di offerte L.68/99.
 - [ ] Aggiungere tag dedicati a invalidita civile, collocamento mirato, art. 1 L.68/99.
-- [ ] Aggiungere sezione Concorsi pubblici.
+- [x] Aggiungere sezione Concorsi pubblici.
 - [ ] Monitorare parole chiave come operatore amministrativo, comunicazione, ufficio stampa, categorie protette.
-- [ ] Preparare scheda riepilogo per ogni bando o concorso.
+- [x] Preparare scheda riepilogo per ogni bando o concorso.
+- [x] Collegare documenti locali ai concorsi pubblici.
+- [x] Evidenziare scadenze entro 7 giorni.
+- [x] Calcolare una prima completezza domanda basata sui documenti richiesti.
 
 ## Versione 2.0 - Radar intelligente
 
@@ -58,6 +62,7 @@ Obiettivo: trasformare l'app da aggregatore a assistente personale.
 - [x] Creare CV Manager locale con metadati, categorie, percorso file e predefinito.
 - [x] Preparare una prima funzione `find_best_cv()` con regole semplici per categoria.
 - [x] Creare Archivio Documenti locale con metadati, categorie, tag, stato e percorsi file.
+- [x] Collegare Archivio Documenti e Concorsi Pubblici come base per checklist e Radar AI.
 - [ ] Aggiungere suggerimenti sul CV per ogni offerta.
 - [ ] Preparare bozza lettera di presentazione.
 - [ ] Evidenziare requisiti mancanti e punti forti.

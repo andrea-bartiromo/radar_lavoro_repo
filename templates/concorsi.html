@@ -1,0 +1,392 @@
+{% extends "base.html" %}
+{% block title %}Concorsi Pubblici - Radar Lavoro{% endblock %}
+
+{% block content %}
+<section class="hero hero-v2">
+    <div>
+        <span class="eyebrow">Opportunita pubbliche</span>
+        <h1>Concorsi Pubblici</h1>
+        <p class="hero-sub">Gestisci bandi, scadenze, stato domanda e documenti collegati all'Archivio Documenti.</p>
+    </div>
+</section>
+
+<section class="competition-stats-grid">
+    <article class="stat-card violet">
+        <span class="stat-icon">PA</span>
+        <strong class="stat-number">{{ stats.totali }}</strong>
+        <span class="stat-label">Concorsi attivi</span>
+    </article>
+    <article class="stat-card green">
+        <span class="stat-icon">PREP</span>
+        <strong class="stat-number">{{ stats.in_preparazione }}</strong>
+        <span class="stat-label">In preparazione</span>
+    </article>
+    <article class="stat-card blue">
+        <span class="stat-icon">INV</span>
+        <strong class="stat-number">{{ stats.domande_inviate }}</strong>
+        <span class="stat-label">Domande inviate</span>
+    </article>
+    <article class="stat-card orange">
+        <span class="stat-icon">7G</span>
+        <strong class="stat-number">{{ stats.scadenze_7 }}</strong>
+        <span class="stat-label">Scadenze entro 7 giorni</span>
+    </article>
+    <article class="stat-card slate">
+        <span class="stat-icon">ID</span>
+        <strong class="stat-number">{{ stats.idoneita_graduatorie }}</strong>
+        <span class="stat-label">Idoneita/graduatorie</span>
+    </article>
+</section>
+
+<section class="form-card competition-filter-card">
+    <form method="get" class="competition-filter-form">
+        <div class="field">
+            <label for="q">Cerca</label>
+            <input id="q" type="text" name="q" value="{{ filters.q }}" placeholder="Titolo, ente, sede, requisiti">
+        </div>
+        <div class="field">
+            <label for="competition_status_filter">Stato concorso</label>
+            <select id="competition_status_filter" name="competition_status">
+                <option value="">Tutti</option>
+                {% for value, label in competition_status_options.items() %}
+                    <option value="{{ value }}" {% if filters.competition_status == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="field">
+            <label for="application_status_filter">Stato domanda</label>
+            <select id="application_status_filter" name="application_status">
+                <option value="">Tutti</option>
+                {% for value, label in competition_application_status_options.items() %}
+                    <option value="{{ value }}" {% if filters.application_status == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="field">
+            <label for="archive_filter">Archivio</label>
+            <select id="archive_filter" name="archive_filter">
+                {% for value, label in competition_archive_filter_options.items() %}
+                    <option value="{{ value }}" {% if filters.archive_filter == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="competition-filter-actions">
+            <button class="btn-primary small" type="submit">Filtra</button>
+            <a class="btn-ghost small" href="{{ url_for('concorsi_pubblici') }}">Reset</a>
+        </div>
+    </form>
+</section>
+
+<div class="competition-layout">
+    <form class="form-card competition-form" method="post">
+        <section class="filter-section">
+            <h2>{{ "Modifica concorso" if edit_competition else "Aggiungi concorso" }}</h2>
+            {% if edit_competition %}
+                <input type="hidden" name="competition_id" value="{{ edit_competition.id }}">
+            {% endif %}
+
+            <div class="filter-two-cols">
+                <div class="field">
+                    <label for="title">Titolo bando</label>
+                    <input id="title" type="text" name="title" value="{{ edit_competition.title if edit_competition else '' }}" placeholder="Istruttore comunicazione">
+                </div>
+                <div class="field">
+                    <label for="organization">Ente</label>
+                    <input id="organization" type="text" name="organization" value="{{ edit_competition.organization if edit_competition else '' }}" placeholder="Comune, Universita, Ministero">
+                </div>
+            </div>
+
+            <div class="filter-two-cols">
+                <div class="field">
+                    <label for="category">Categoria</label>
+                    <select id="category" name="category">
+                        {% for category in competition_categories %}
+                            <option value="{{ category }}" {% if edit_competition and edit_competition.category == category %}selected{% endif %}>{{ category }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="field">
+                    <label for="location">Sede</label>
+                    <input id="location" type="text" name="location" value="{{ edit_competition.location if edit_competition else '' }}" placeholder="Salerno, Campania, remoto">
+                </div>
+            </div>
+
+            <div class="field">
+                <label for="source_url">Link bando</label>
+                <input id="source_url" type="url" name="source_url" value="{{ edit_competition.source_url if edit_competition else '' }}" placeholder="https://...">
+            </div>
+        </section>
+
+        <section class="filter-section">
+            <h2>Stato e contratto</h2>
+            <div class="filter-two-cols">
+                <div class="field">
+                    <label for="competition_status">Stato concorso</label>
+                    <select id="competition_status" name="competition_status">
+                        {% for value, label in competition_status_options.items() %}
+                            <option value="{{ value }}" {% if edit_competition and edit_competition.competition_status == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="field">
+                    <label for="application_status">Stato domanda</label>
+                    <select id="application_status" name="application_status">
+                        {% for value, label in competition_application_status_options.items() %}
+                            <option value="{{ value }}" {% if edit_competition and edit_competition.application_status == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div class="filter-two-cols">
+                <div class="field">
+                    <label for="positions_count">Posti disponibili</label>
+                    <input id="positions_count" type="number" min="0" name="positions_count" value="{{ edit_competition.positions_count if edit_competition else '' }}" placeholder="1">
+                </div>
+                <div class="field">
+                    <label for="contract_type">Contratto</label>
+                    <input id="contract_type" type="text" name="contract_type" value="{{ edit_competition.contract_type if edit_competition else '' }}" placeholder="Tempo indeterminato, determinato, part-time">
+                </div>
+            </div>
+
+            <label class="choice-card competition-archive-choice">
+                <input type="checkbox" name="is_archived" {% if edit_competition and edit_competition.is_archived %}checked{% endif %}>
+                Archiviato
+            </label>
+        </section>
+
+        <section class="filter-section">
+            <h2>Date principali</h2>
+            <div class="competition-date-grid">
+                <div class="field">
+                    <label for="published_at">Pubblicazione</label>
+                    <input id="published_at" type="date" name="published_at" value="{{ edit_competition.published_at if edit_competition else '' }}">
+                </div>
+                <div class="field">
+                    <label for="application_opens_at">Apertura domanda</label>
+                    <input id="application_opens_at" type="date" name="application_opens_at" value="{{ edit_competition.application_opens_at if edit_competition else '' }}">
+                </div>
+                <div class="field">
+                    <label for="deadline_at">Scadenza</label>
+                    <input id="deadline_at" type="date" name="deadline_at" value="{{ edit_competition.deadline_at if edit_competition else '' }}">
+                </div>
+                <div class="field">
+                    <label for="written_exam_at">Prova scritta</label>
+                    <input id="written_exam_at" type="date" name="written_exam_at" value="{{ edit_competition.written_exam_at if edit_competition else '' }}">
+                </div>
+                <div class="field">
+                    <label for="oral_exam_at">Prova orale</label>
+                    <input id="oral_exam_at" type="date" name="oral_exam_at" value="{{ edit_competition.oral_exam_at if edit_competition else '' }}">
+                </div>
+                <div class="field">
+                    <label for="ranking_at">Graduatoria</label>
+                    <input id="ranking_at" type="date" name="ranking_at" value="{{ edit_competition.ranking_at if edit_competition else '' }}">
+                </div>
+            </div>
+        </section>
+
+        <section class="filter-section">
+            <h2>Requisiti e documenti richiesti</h2>
+            <div class="field">
+                <label for="requirements">Requisiti</label>
+                <textarea id="requirements" name="requirements" rows="4" placeholder="Titoli, competenze, requisiti generali e preferenziali">{{ edit_competition.requirements if edit_competition else '' }}</textarea>
+            </div>
+            <div class="field">
+                <label for="required_documents">Documenti richiesti</label>
+                <textarea id="required_documents" name="required_documents" rows="4" placeholder="Una voce per riga">{{ join_lines(edit_competition.required_documents) if edit_competition else '' }}</textarea>
+            </div>
+        </section>
+
+        <section class="filter-section">
+            <h2>Note interne</h2>
+            <div class="field">
+                <label for="personal_notes">Note personali</label>
+                <textarea id="personal_notes" name="personal_notes" rows="4" placeholder="Promemoria, dubbi, prossimi passi">{{ edit_competition.personal_notes if edit_competition else '' }}</textarea>
+            </div>
+        </section>
+
+        <div class="form-actions">
+            <button class="btn-primary" type="submit">{{ "Salva modifiche" if edit_competition else "Aggiungi concorso" }}</button>
+            {% if edit_competition %}
+                <a class="btn-ghost" href="{{ url_for('concorsi_pubblici') }}">Annulla modifica</a>
+            {% endif %}
+        </div>
+    </form>
+
+    <aside class="competition-side">
+        <article class="panel-card competition-deadlines">
+            <span class="eyebrow">Scadenze imminenti</span>
+            <h3>Entro 7 giorni</h3>
+            <ul class="mini-list">
+                {% set found_deadline = namespace(value=false) %}
+                {% for competition in competitions %}
+                    {% if competition.is_deadline_soon %}
+                        {% set found_deadline.value = true %}
+                        <li>
+                            <span class="dot high"></span>
+                            {{ competition.title|truncate(38) }}
+                            <strong>{{ competition.deadline_at }}</strong>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+                {% if not found_deadline.value %}
+                    <li>
+                        <span class="dot mid"></span>
+                        Nessuna scadenza urgente
+                        <strong>OK</strong>
+                    </li>
+                {% endif %}
+            </ul>
+        </article>
+
+        <article class="panel-card competition-documents-panel">
+            <span class="eyebrow">Archivio Documenti</span>
+            <h3>Documenti collegati</h3>
+            {% if edit_competition %}
+                <form method="post" action="{{ url_for('collega_documento_concorso', competition_id=edit_competition.id) }}" class="competition-link-form">
+                    <div class="field">
+                        <label for="document_id">Documento</label>
+                        <select id="document_id" name="document_id">
+                            <option value="">Seleziona documento</option>
+                            {% for document in documents %}
+                                <option value="{{ document.id }}">{{ document.title }} - {{ document.category }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label for="purpose">Uso</label>
+                        <input id="purpose" type="text" name="purpose" placeholder="Documento identita, CV, certificazione">
+                    </div>
+                    <div class="choice-grid compact">
+                        <label class="choice-card">
+                            <input type="checkbox" name="is_required" checked>
+                            Richiesto
+                        </label>
+                        <label class="choice-card">
+                            <input type="checkbox" name="is_ready">
+                            Pronto
+                        </label>
+                    </div>
+                    <div class="field">
+                        <label for="document_notes">Note</label>
+                        <textarea id="document_notes" name="notes" rows="3"></textarea>
+                    </div>
+                    <button class="btn-secondary small" type="submit">Collega documento</button>
+                </form>
+
+                {% if edit_competition.linked_documents %}
+                    <div class="competition-linked-list">
+                        {% for link in edit_competition.linked_documents %}
+                            <div class="competition-linked-item">
+                                <strong>{{ link.document_title or "Documento non trovato" }}</strong>
+                                <span>{{ link.purpose }} · {{ "Pronto" if link.is_ready else "Da preparare" }}</span>
+                                {% if link.notes %}
+                                    <small>{{ link.notes }}</small>
+                                {% endif %}
+                                <form method="post" action="{{ url_for('rimuovi_documento_concorso', competition_id=edit_competition.id, link_id=link.id) }}">
+                                    <button class="btn-ghost small danger" type="submit">Rimuovi</button>
+                                </form>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% else %}
+                <p>Seleziona un concorso in modifica per collegare documenti gia presenti nell'archivio.</p>
+            {% endif %}
+        </article>
+    </aside>
+</div>
+
+<section class="cv-list-section competition-list-section">
+    <div class="section-title-row">
+        <div>
+            <span class="eyebrow">Bandi salvati</span>
+            <h2>{{ competitions|length }} concorsi nella vista corrente</h2>
+        </div>
+    </div>
+
+    <div class="cv-grid competition-grid">
+        {% for competition in competitions %}
+            <article class="cv-card competition-card {{ 'is-archived' if competition.is_archived else '' }} {{ 'deadline-soon' if competition.is_deadline_soon else '' }}">
+                <div class="cv-card-head">
+                    <div>
+                        <span class="cv-category">{{ competition.category }}</span>
+                        <h3>{{ competition.title }}</h3>
+                        <p>{{ competition.organization or "Ente non indicato" }} · {{ competition.location or "Sede non indicata" }}</p>
+                    </div>
+                    <div class="cv-status-stack">
+                        <span class="cv-state competition-status-{{ competition.competition_status }}">{{ competition.competition_status_label }}</span>
+                        <span class="cv-state competition-application-{{ competition.application_status }}">{{ competition.application_status_label }}</span>
+                    </div>
+                </div>
+
+                <dl class="cv-meta-grid">
+                    <div>
+                        <dt>Scadenza</dt>
+                        <dd>
+                            {{ competition.deadline_at or "Non indicata" }}
+                            {% if competition.is_deadline_soon %}
+                                <span class="inline-alert">urgente</span>
+                            {% elif competition.is_deadline_expired %}
+                                <span class="inline-alert muted">scaduta</span>
+                            {% endif %}
+                        </dd>
+                    </div>
+                    <div>
+                        <dt>Posti</dt>
+                        <dd>{{ competition.positions_count or "Non indicati" }}</dd>
+                    </div>
+                    <div>
+                        <dt>Contratto</dt>
+                        <dd>{{ competition.contract_type or "Non indicato" }}</dd>
+                    </div>
+                    <div>
+                        <dt>Aggiornato</dt>
+                        <dd>{{ competition.updated_at_label or "Non indicato" }}</dd>
+                    </div>
+                </dl>
+
+                <div class="competition-completion">
+                    <div>
+                        <strong>Completezza domanda</strong>
+                        <span>{{ competition.completion_label }}</span>
+                    </div>
+                    <div class="score-bar" aria-hidden="true">
+                        <span style="--score-width: {{ competition.completion_percentage }}%;"></span>
+                    </div>
+                </div>
+
+                {% if competition.required_documents %}
+                    <div class="document-tags">
+                        {% for item in competition.required_documents %}
+                            <span>{{ item }}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+
+                {% if competition.personal_notes %}
+                    <p class="cv-note">{{ competition.personal_notes }}</p>
+                {% endif %}
+
+                <div class="cv-actions">
+                    <a class="btn-ghost" href="{{ url_for('concorsi_pubblici', edit=competition.id) }}">Modifica</a>
+                    {% if competition.source_url %}
+                        <a class="btn-secondary" href="{{ competition.source_url }}" target="_blank" rel="noopener">Vedi bando</a>
+                    {% endif %}
+                    <form method="post" action="{{ url_for('archivia_concorso', competition_id=competition.id) }}">
+                        <button class="btn-secondary" type="submit" {% if competition.is_archived %}disabled{% endif %}>Archivia</button>
+                    </form>
+                    <form method="post" action="{{ url_for('elimina_concorso', competition_id=competition.id) }}" onsubmit="return confirm('Eliminare questo concorso? I documenti locali non verranno cancellati.');">
+                        <button class="btn-ghost danger" type="submit">Elimina</button>
+                    </form>
+                </div>
+            </article>
+        {% else %}
+            <div class="empty-state">
+                <strong>Nessun concorso trovato</strong>
+                <p>Aggiungi un bando o modifica i filtri di ricerca.</p>
+            </div>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}

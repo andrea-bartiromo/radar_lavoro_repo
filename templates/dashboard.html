@@ -282,6 +282,41 @@
             </ul>
         </div>
 
+        <div class="panel-card competition-dashboard-card">
+            <span class="eyebrow">Concorsi Pubblici</span>
+            <h3>Monitoraggio bandi</h3>
+
+            <ul class="mini-list">
+                <li>
+                    <span class="dot high"></span>
+                    Concorsi attivi
+                    <strong>{{ competition_overview.totali }}</strong>
+                </li>
+                <li>
+                    <span class="dot mid"></span>
+                    In preparazione
+                    <strong>{{ competition_overview.in_preparazione }}</strong>
+                </li>
+                <li>
+                    <span class="dot high"></span>
+                    Domande inviate
+                    <strong>{{ competition_overview.domande_inviate }}</strong>
+                </li>
+                <li>
+                    <span class="dot low"></span>
+                    Scadenze entro 7 giorni
+                    <strong>{{ competition_overview.scadenze_7 }}</strong>
+                </li>
+                <li>
+                    <span class="dot high"></span>
+                    Idoneita/graduatorie
+                    <strong>{{ competition_overview.idoneita_graduatorie }}</strong>
+                </li>
+            </ul>
+
+            <a class="btn-ghost small" href="{{ url_for('concorsi_pubblici') }}">Apri concorsi</a>
+        </div>
+
         <div class="panel-card keywords-card">
             <h3>Parole chiave attive</h3>
 

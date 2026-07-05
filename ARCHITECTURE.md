@@ -32,6 +32,7 @@ La versione corrente include:
 - CRM candidature con stato candidatura, note, date e offerte seguite;
 - profilo professionale strutturato con formazione, esperienze, certificazioni, competenze, competenze tecniche, ruoli obiettivo, preferenze territoriali e categorie protette.
 - CV Manager locale con metadati dei curriculum, categorie, stato attivo, CV predefinito e suggerimento iniziale per categoria.
+- Archivio Documenti locale con metadati, categorie, tag, stato, percorsi file e collegamento opzionale ai CV.
 
 ## Struttura attuale del repository
 
@@ -40,6 +41,7 @@ radar_lavoro_repo/
 |-- app.py
 |-- radar_candidates.py
 |-- radar_cv.py
+|-- radar_documents.py
 |-- radar_profile.py
 |-- requirements.txt
 |-- README.md
@@ -49,15 +51,18 @@ radar_lavoro_repo/
 |-- docs/
 |   |-- SISTEMA_CANDIDATURE.md
 |   |-- PROFILO_PROFESSIONALE.md
-|   `-- CV_MANAGER.md
+|   |-- CV_MANAGER.md
+|   `-- DOCUMENT_ARCHIVE.md
 |-- migrations/
 |   |-- 001_candidature.sql
 |   |-- 002_profilo_professionale.sql
-|   `-- 003_cv_manager.sql
+|   |-- 003_cv_manager.sql
+|   `-- 004_document_archive.sql
 |-- templates/
 |   |-- base.html
 |   |-- cv.html
 |   |-- dashboard.html
+|   |-- documenti.html
 |   |-- filtri.html
 |   |-- impostazioni.html
 |   `-- profilo.html
@@ -154,6 +159,19 @@ Responsabilita:
 Il modulo salva solo metadati e percorsi locali. I file CV non vengono copiati,
 caricati o salvati nel database.
 
+### radar_documents.py
+
+Responsabilita:
+
+- schema e compatibilita della tabella `document_archive`;
+- categorie, formati e stati dei documenti;
+- lettura, salvataggio, archiviazione ed eliminazione dei record;
+- normalizzazione di tag, formato, categoria e stato;
+- statistiche sintetiche per la pagina Archivio Documenti.
+
+Il modulo salva solo metadati e percorsi locali. I file personali non vengono
+copiati, caricati o salvati nel database.
+
 ### templates/
 
 Responsabilita:
@@ -161,6 +179,7 @@ Responsabilita:
 - `base.html`: layout, navigazione, sidebar;
 - `dashboard.html`: elenco offerte, punteggi, CRM candidature;
 - `cv.html`: archivio CV, form metadati, stato attivo, predefinito e suggerimento automatico;
+- `documenti.html`: archivio documenti, form metadati, tag, stato e collegamento CV;
 - `impostazioni.html`: configurazione ricerca;
 - `filtri.html`: filtri avanzati e priorita;
 - `profilo.html`: scheda professionale strutturata.
@@ -172,7 +191,7 @@ Responsabilita:
 - design system visivo;
 - layout dashboard;
 - card offerte;
-- form impostazioni, filtri, profilo e CV Manager;
+- form impostazioni, filtri, profilo, CV Manager e Archivio Documenti;
 - componenti CRM candidature.
 
 ## Flusso dati attuale
@@ -188,6 +207,7 @@ Responsabilita:
 9. L'utente aggiorna stato candidatura e note.
 10. Il profilo professionale alimenta parole chiave e ranking.
 11. Il CV Manager mantiene i curriculum locali e prepara il suggerimento del CV piu adatto.
+12. L'Archivio Documenti mantiene metadati e percorsi locali dei documenti utili a candidature e concorsi.
 
 ## Convenzioni codice
 
@@ -234,7 +254,7 @@ Responsabilita:
 - Archivio CV con metadati e percorsi locali.
 - Categorie CV e stato attivo/predefinito.
 - Prima funzione di suggerimento CV per categoria.
-- Documenti personali locali.
+- Archivio Documenti con metadati, tag, stati e percorsi locali.
 - Suggerimento CV per offerta da integrare nella dashboard.
 - Checklist candidatura.
 

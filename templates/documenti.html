@@ -1,0 +1,238 @@
+{% extends "base.html" %}
+{% block title %}Archivio Documenti - Radar Lavoro{% endblock %}
+
+{% block content %}
+<section class="hero hero-v2">
+    <div>
+        <span class="eyebrow">Archivio locale</span>
+        <h1>Archivio Documenti</h1>
+        <p class="hero-sub">Raccoglie metadati e percorsi locali dei documenti utili a candidature, concorsi, CV Manager e Radar AI.</p>
+    </div>
+</section>
+
+<section class="stats-row-four document-stats">
+    <article class="stat-card violet">
+        <span class="stat-icon">DOC</span>
+        <strong class="stat-number">{{ stats.totali }}</strong>
+        <span class="stat-label">Documenti</span>
+    </article>
+    <article class="stat-card green">
+        <span class="stat-icon">OK</span>
+        <strong class="stat-number">{{ stats.attivi }}</strong>
+        <span class="stat-label">Attivi</span>
+    </article>
+    <article class="stat-card orange">
+        <span class="stat-icon">REV</span>
+        <strong class="stat-number">{{ stats.da_aggiornare }}</strong>
+        <span class="stat-label">Da aggiornare</span>
+    </article>
+    <article class="stat-card blue">
+        <span class="stat-icon">TAG</span>
+        <strong class="stat-number">{{ stats.categorie }}</strong>
+        <span class="stat-label">Categorie</span>
+    </article>
+</section>
+
+<div class="document-layout">
+    <form class="form-card document-form" method="post">
+        <section class="filter-section">
+            <h2>{{ "Modifica documento" if edit_document else "Aggiungi documento" }}</h2>
+            {% if edit_document %}
+                <input type="hidden" name="document_id" value="{{ edit_document.id }}">
+            {% endif %}
+
+            <div class="filter-two-cols">
+                <div class="field">
+                    <label for="title">Nome documento</label>
+                    <input id="title" type="text" name="title" value="{{ edit_document.title if edit_document else '' }}" placeholder="Lettera di presentazione - Marketing">
+                </div>
+                <div class="field">
+                    <label for="category">Categoria</label>
+                    <select id="category" name="category">
+                        {% for category in document_categories %}
+                            <option value="{{ category }}" {% if edit_document and edit_document.category == category %}selected{% endif %}>{{ category }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div class="field">
+                <label for="description">Descrizione</label>
+                <textarea id="description" name="description" rows="3" placeholder="Quando usarlo, per quali candidature o concorsi">{{ edit_document.description if edit_document else '' }}</textarea>
+            </div>
+        </section>
+
+        <section class="filter-section">
+            <h2>File e collegamenti</h2>
+            <div class="filter-two-cols">
+                <div class="field">
+                    <label for="file_format">Formato</label>
+                    <select id="file_format" name="file_format">
+                        {% for file_format in document_format_options %}
+                            <option value="{{ file_format }}" {% if edit_document and edit_document.file_format == file_format %}selected{% endif %}>{{ file_format }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="field">
+                    <label for="related_cv_id">CV collegato</label>
+                    <select id="related_cv_id" name="related_cv_id">
+                        <option value="">Nessun CV collegato</option>
+                        {% for cv in cv_documents %}
+                            <option value="{{ cv.id }}" {% if edit_document and edit_document.related_cv_id == cv.id %}selected{% endif %}>{{ cv.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div class="field">
+                <label for="file_path">Percorso file</label>
+                <input id="file_path" type="text" name="file_path" value="{{ edit_document.file_path if edit_document else '' }}" placeholder="C:\Percorso\locale\documento.pdf">
+                <p class="hint">Il file resta locale: Radar Lavoro salva solo il percorso e i metadati.</p>
+            </div>
+
+            <div class="filter-two-cols">
+                <div class="field">
+                    <label for="checksum">Checksum opzionale</label>
+                    <input id="checksum" type="text" name="checksum" value="{{ edit_document.checksum if edit_document else '' }}" placeholder="Opzionale">
+                </div>
+                <div class="field">
+                    <label for="expires_at">Scadenza opzionale</label>
+                    <input id="expires_at" type="text" name="expires_at" value="{{ edit_document.expires_at if edit_document else '' }}" placeholder="2026-12-31">
+                </div>
+            </div>
+        </section>
+
+        <section class="filter-section">
+            <h2>Stato e tag</h2>
+            <div class="filter-two-cols">
+                <div class="field">
+                    <label for="status">Stato</label>
+                    <select id="status" name="status">
+                        {% for status, label in document_status_options.items() %}
+                            <option value="{{ status }}" {% if edit_document and edit_document.status == status %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="field">
+                    <label>Disponibilita</label>
+                    <label class="choice-card document-active-choice">
+                        <input type="checkbox" name="is_active" {% if not edit_document or edit_document.is_active %}checked{% endif %}>
+                        Documento attivo
+                    </label>
+                </div>
+            </div>
+
+            <div class="field">
+                <label for="tags">Tag</label>
+                <textarea id="tags" name="tags" rows="4" placeholder="Una voce per riga">{{ join_lines(edit_document.tags) if edit_document else '' }}</textarea>
+            </div>
+        </section>
+
+        <section class="filter-section">
+            <h2>Note</h2>
+            <div class="field">
+                <label for="notes">Note interne</label>
+                <textarea id="notes" name="notes" rows="4" placeholder="Revisioni, uso consigliato, collegamenti a candidature">{{ edit_document.notes if edit_document else '' }}</textarea>
+            </div>
+        </section>
+
+        <div class="form-actions">
+            <button class="btn-primary" type="submit">{{ "Salva modifiche" if edit_document else "Aggiungi documento" }}</button>
+            {% if edit_document %}
+                <a class="btn-ghost" href="{{ url_for('archivio_documenti') }}">Annulla modifica</a>
+            {% endif %}
+        </div>
+    </form>
+
+    <aside class="cv-side">
+        <article class="panel-card document-panel">
+            <span class="eyebrow">Regola locale</span>
+            <h3>Solo percorsi e metadati</h3>
+            <p>I file personali restano fuori dal repository e fuori dal database.</p>
+        </article>
+        <article class="panel-card document-panel">
+            <span class="eyebrow">Pronto per Radar AI</span>
+            <h3>Base documentale</h3>
+            <p>Tag, categorie e CV collegato saranno usati per suggerimenti e checklist candidatura.</p>
+        </article>
+    </aside>
+</div>
+
+<section class="cv-list-section">
+    <div class="section-title-row">
+        <div>
+            <span class="eyebrow">Documenti salvati</span>
+            <h2>Archivio locale</h2>
+        </div>
+    </div>
+
+    <div class="cv-grid document-grid">
+        {% for document in documents %}
+            <article class="cv-card document-card">
+                <div class="cv-card-head">
+                    <div>
+                        <span class="cv-category">{{ document.category }}</span>
+                        <h3>{{ document.title }}</h3>
+                        {% if document.description %}
+                            <p>{{ document.description }}</p>
+                        {% endif %}
+                    </div>
+                    <div class="cv-status-stack">
+                        <span class="cv-state {{ 'active' if document.is_active else 'inactive' }}">{{ "Attivo" if document.is_active else "Non attivo" }}</span>
+                        <span class="cv-state document-status-{{ document.status }}">{{ document.status_label }}</span>
+                    </div>
+                </div>
+
+                <dl class="cv-meta-grid">
+                    <div>
+                        <dt>Formato</dt>
+                        <dd>{{ document.file_format or "Non indicato" }}</dd>
+                    </div>
+                    <div>
+                        <dt>Scadenza</dt>
+                        <dd>{{ document.expires_at or "Non indicata" }}</dd>
+                    </div>
+                    <div>
+                        <dt>Creato</dt>
+                        <dd>{{ document.created_at_label or "Non indicato" }}</dd>
+                    </div>
+                    <div>
+                        <dt>Ultima modifica</dt>
+                        <dd>{{ document.updated_at_label or "Non indicata" }}</dd>
+                    </div>
+                </dl>
+
+                {% if document.tags %}
+                    <div class="document-tags">
+                        {% for tag in document.tags %}
+                            <span>{{ tag }}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+
+                {% if document.file_path %}
+                    <p class="cv-path">{{ document.file_path }}</p>
+                {% endif %}
+                {% if document.notes %}
+                    <p class="cv-note">{{ document.notes }}</p>
+                {% endif %}
+
+                <div class="cv-actions">
+                    <a class="btn-ghost" href="{{ url_for('archivio_documenti', edit=document.id) }}">Modifica</a>
+                    <form method="post" action="{{ url_for('archivia_documento', document_id=document.id) }}">
+                        <button class="btn-secondary" type="submit" {% if document.status == 'archiviato' %}disabled{% endif %}>Archivia</button>
+                    </form>
+                    <form method="post" action="{{ url_for('elimina_documento', document_id=document.id) }}" onsubmit="return confirm('Eliminare questo documento dall archivio? Il file locale non verra cancellato.');">
+                        <button class="btn-ghost danger" type="submit">Elimina</button>
+                    </form>
+                </div>
+            </article>
+        {% else %}
+            <div class="empty-state">
+                <strong>Nessun documento salvato</strong>
+                <p>Aggiungi un documento usando il modulo in alto.</p>
+            </div>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}

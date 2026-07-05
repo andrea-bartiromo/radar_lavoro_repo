@@ -2253,6 +2253,68 @@ h1 {
     border-color: #fca5a5;
 }
 
+.document-stats {
+    margin-bottom: 22px;
+}
+
+.document-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: 22px;
+    align-items: start;
+}
+
+.document-panel p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.document-active-choice {
+    min-height: 48px;
+    margin: 0;
+}
+
+.document-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin-top: 14px;
+}
+
+.document-tags span {
+    display: inline-flex;
+    align-items: center;
+    min-height: 28px;
+    padding: 6px 9px;
+    border-radius: 999px;
+    background: #f1f5f9;
+    color: #475569;
+    font-size: 11px;
+    font-weight: 900;
+}
+
+.document-status-pronto {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.document-status-bozza {
+    background: #e0f2fe;
+    color: #0369a1;
+}
+
+.document-status-da_aggiornare {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.document-status-archiviato {
+    background: #f1f5f9;
+    color: #64748b;
+}
+
 @media (max-width: 1200px) {
     .dashboard-layout {
         grid-template-columns: 1fr;
@@ -2269,6 +2331,10 @@ h1 {
 
     .cv-side {
         position: static;
+    }
+
+    .document-layout {
+        grid-template-columns: 1fr;
     }
 
     .profile-hero-card {

@@ -470,6 +470,9 @@ def link_competition_document(conn, competition_id, form):
     document_id = _int_from_form(form, "document_id")
     if document_id <= 0:
         return False
+    document = conn.execute("SELECT id FROM document_archive WHERE id = ?", (document_id,)).fetchone()
+    if document is None:
+        return False
 
     now = _now()
     values = {

@@ -23,6 +23,7 @@
             <a href="{{ url_for('profilo') }}" class="{{ 'active' if request.endpoint == 'profilo' }}"><span>👤</span> Profilo</a>
             <a href="{{ url_for('cv_manager') }}" class="{{ 'active' if request.endpoint in ['cv_manager', 'elimina_cv', 'imposta_cv_predefinito'] }}"><span>CV</span> CV Manager</a>
             <a href="{{ url_for('archivio_documenti') }}" class="{{ 'active' if request.endpoint in ['archivio_documenti', 'elimina_documento', 'archivia_documento'] }}"><span>DOC</span> Documenti</a>
+            <a href="{{ url_for('concorsi_pubblici') }}" class="{{ 'active' if request.endpoint in ['concorsi_pubblici', 'elimina_concorso', 'archivia_concorso', 'collega_documento_concorso', 'rimuovi_documento_concorso'] }}"><span>PA</span> Concorsi Pubblici</a>
             <a href="#" class="disabled"><span>📊</span> Statistiche <small>presto</small></a>
             <a href="#" class="disabled"><span>🤖</span> Radar AI <small>beta</small></a>
         </nav>
